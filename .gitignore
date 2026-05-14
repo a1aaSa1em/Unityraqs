@@ -1,0 +1,28 @@
+# Unity
+Library/
+Temp/
+Logs/
+Build/
+Builds/
+obj/
+UserSettings/
+*.csproj
+*.sln
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.opendb
+*.VC.db
+
+# Mac
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+desktop.ini
