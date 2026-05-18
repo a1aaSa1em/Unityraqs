@@ -443,16 +443,20 @@
             },
             {
                 "patchline": {
-                    "destination": [ "obj-42", 0 ],
-                    "order": 1,
+                    "destination": [ "obj-40", 0 ],
                     "source": [ "obj-39", 0 ]
                 }
             },
             {
                 "patchline": {
+                    "destination": [ "obj-42", 0 ],
+                    "source": [ "obj-40", 0 ]
+                }
+            },
+            {
+                "patchline": {
                     "destination": [ "obj-44", 0 ],
-                    "order": 0,
-                    "source": [ "obj-39", 0 ]
+                    "source": [ "obj-40", 1 ]
                 }
             },
             {

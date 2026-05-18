@@ -119,6 +119,88 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1001 &19027279
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: -8679921383154817045, guid: fff9e3442dfab410486e0edf473cc96d, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: fff9e3442dfab410486e0edf473cc96d, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: fff9e3442dfab410486e0edf473cc96d, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: fff9e3442dfab410486e0edf473cc96d, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: fff9e3442dfab410486e0edf473cc96d, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.3
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: fff9e3442dfab410486e0edf473cc96d, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: fff9e3442dfab410486e0edf473cc96d, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: fff9e3442dfab410486e0edf473cc96d, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: fff9e3442dfab410486e0edf473cc96d, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: fff9e3442dfab410486e0edf473cc96d, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: fff9e3442dfab410486e0edf473cc96d, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: fff9e3442dfab410486e0edf473cc96d, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: fff9e3442dfab410486e0edf473cc96d, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: fff9e3442dfab410486e0edf473cc96d, type: 3}
+      propertyPath: m_Name
+      value: Elmo Rigged
+      objectReference: {fileID: 0}
+    - target: {fileID: 5866666021909216657, guid: fff9e3442dfab410486e0edf473cc96d, type: 3}
+      propertyPath: m_Controller
+      value: 
+      objectReference: {fileID: 9100000, guid: 7e1dc4975936142ada2972c2e075562a, type: 2}
+    - target: {fileID: 5866666021909216657, guid: fff9e3442dfab410486e0edf473cc96d, type: 3}
+      propertyPath: m_ApplyRootMotion
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: fff9e3442dfab410486e0edf473cc96d, type: 3}
+--- !u!95 &19027280 stripped
+Animator:
+  m_CorrespondingSourceObject: {fileID: 5866666021909216657, guid: fff9e3442dfab410486e0edf473cc96d, type: 3}
+  m_PrefabInstance: {fileID: 19027279}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &44741651
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -181,7 +263,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: ca4d3ab02dfdc4aedab35aaef968597d, type: 3}
       propertyPath: m_Name
-      value: Lola Bunny
+      value: Lola Bunny (disabled)
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: ca4d3ab02dfdc4aedab35aaef968597d, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5866666021909216657, guid: ca4d3ab02dfdc4aedab35aaef968597d, type: 3}
       propertyPath: m_Avatar
@@ -304,11 +390,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!95 &926003902 stripped
-Animator:
-  m_CorrespondingSourceObject: {fileID: 5866666021909216657, guid: ca4d3ab02dfdc4aedab35aaef968597d, type: 3}
-  m_PrefabInstance: {fileID: 44741651}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &1305422534
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -407,9 +488,84 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 943624a81844f4bccad1e2cb2f5fb0bd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DrumDanceController
-  LolaAnimator: {fileID: 926003902}
+  LolaAnimator: {fileID: 19027280}
   IdleStateName: Idle
   Port: 7000
+  Mode: 1
+  PhraseBufferSeconds: 2.5
+  SilenceFlushSeconds: 0.55
+  MinimumHitsForPhrase: 1
+  PhrasePlaySeconds: 2.5
+  PhraseCrossfade: 0.28
+  HoldPhraseUntilNextPhrase: 1
+  PhrasePools:
+  - Name: Grounded belly flow
+    States:
+    - Bellydancing
+    - Belly Dance
+    - belly_continuous
+    - belly_b_continuous
+    - belly_a_flow
+    - belly_extended
+    Weight: 4
+    PreferredStroke: Any
+  - Name: Doum hip drops
+    States:
+    - hip_drops_double
+    - belly_a_dropA
+    - belly_a_dropB
+    - accent_belly_pop_1
+    - accent_belly_pop_2
+    Weight: 3
+    PreferredStroke: Doum
+  - Name: Tek rolls
+    States:
+    - accent_belly_roll_1
+    - accent_belly_roll_2
+    - belly_roll_slow
+    - belly_roll_varied
+    - belly_a_roll_open
+    - belly_a_roll_mid
+    Weight: 2
+    PreferredStroke: Tek
+  - Name: Ka sways
+    States:
+    - accent_belly_sway_1
+    - accent_belly_sway_2
+    - belly_a_undulation
+    - belly_b_open
+    - belly_b_returnA
+    - belly_b_returnB
+    Weight: 2
+    PreferredStroke: Ka
+  - Name: Trillo ornaments
+    States:
+    - accent_bellydance_1
+    - accent_bellydance_2
+    - accent_bellydance_3
+    - accent_bellydance_4
+    - accent_bellydance_5
+    - accent_bellydance_6
+    - accent_bellydance_7
+    - accent_belly_final_1
+    - accent_belly_final_2
+    Weight: 1
+    PreferredStroke: Trillo
+  PulseAnimatorSpeedOnHits: 1
+  BeatPulseReturnSpeed: 8
+  DoumSpeedPulse: 1.35
+  TekSpeedPulse: 1.18
+  KaSpeedPulse: 1.22
+  TrilloSpeedPulse: 1.45
+  ToggleRecordingKey: 114
+  TogglePlaybackKey: 112
+  ClearRecordingKey: 99
+  RecordLiveInput: 0
+  PlaybackRecordedPattern: 0
+  LoopRecordedPattern: 1
+  IgnoreLiveInputDuringPlayback: 1
+  PlaybackStartDelay: 0.25
+  RecordedPattern: []
   DoumDanceStates:
   - Scene 60
   - Scene 61
@@ -562,3 +718,4 @@ SceneRoots:
   - {fileID: 44741651}
   - {fileID: 1596381568}
   - {fileID: 1305422534}
+  - {fileID: 19027279}
