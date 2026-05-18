@@ -64,6 +64,16 @@ public class DrumDanceController : MonoBehaviour
     [Header("OSC")]
     public int Port = 7000;
 
+    [Header("Input Status")]
+    [Tooltip("Last stroke processed by this controller. Useful for comparison scenes and debugging Max OSC input.")]
+    public string LastStrokeType = "None";
+
+    [Tooltip("Input source for the last stroke: OSC, Test, Playback, or Recording.")]
+    public string LastInputSource = "None";
+
+    public int TotalProcessedStrokes = 0;
+    public float LastStrokeRealtime = -999f;
+
     [Header("Dance Mode")]
     [Tooltip("BufferedPhrases waits briefly, reads the rhythm shape, then plays a coherent 2-4 second movement.")]
     public DanceMode Mode = DanceMode.BufferedPhrases;
@@ -385,7 +395,7 @@ public class DrumDanceController : MonoBehaviour
                 continue;
             }
 
-            ProcessStroke(strokeType, true);
+            ProcessStroke(strokeType, true, "OSC");
         }
 
         if (Mode == DanceMode.BufferedPhrases || Mode == DanceMode.RhythmPatterns)
@@ -401,8 +411,28 @@ public class DrumDanceController : MonoBehaviour
         }
     }
 
-    private void ProcessStroke(string strokeType, bool canRecord)
+    public void InjectTestStroke(string strokeType)
     {
+        ProcessStroke(strokeType, false, "Test");
+    }
+
+    public void InjectStroke(string strokeType, string inputSource)
+    {
+        ProcessStroke(strokeType, false, string.IsNullOrWhiteSpace(inputSource) ? "Unity" : inputSource);
+    }
+
+    public bool HasRecentInput(float seconds)
+    {
+        return Time.realtimeSinceStartup - LastStrokeRealtime <= seconds;
+    }
+
+    private void ProcessStroke(string strokeType, bool canRecord, string inputSource)
+    {
+        LastStrokeType = strokeType;
+        LastInputSource = inputSource;
+        LastStrokeRealtime = Time.realtimeSinceStartup;
+        TotalProcessedStrokes++;
+
         if (canRecord && RecordLiveInput)
         {
             RecordStroke(strokeType);
@@ -602,7 +632,7 @@ public class DrumDanceController : MonoBehaviour
 
         while (playbackIndex < RecordedPattern.Count && RecordedPattern[playbackIndex].Time <= playbackTime)
         {
-            ProcessStroke(RecordedPattern[playbackIndex].Type, false);
+            ProcessStroke(RecordedPattern[playbackIndex].Type, false, "Playback");
             playbackIndex++;
         }
 

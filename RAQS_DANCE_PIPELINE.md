@@ -79,3 +79,25 @@ Keep each phrase pool stylistically narrow:
 - If a clip looks useful but too energetic, put it in a low-weight phrase or remove it.
 
 The cleanest result will come from fewer good clips, not more random clips.
+
+## Bailando comparison scene
+
+Use `Tools > Raqs > Create Bailando Comparison Scene` to create
+`Assets/Scenes/BailandoCompare.unity`.
+
+The left Elmo uses the existing Max OSC + Mixamo/FBX Animator workflow.
+The right Elmo uses `Assets/Scripts/BailandoPosePlayer.cs` and reads generated
+Bailando poses from:
+
+`Assets/StreamingAssets/Bailando/latest_pose.json`
+
+The Bailando side is seeded from `export_unity_pose_json.py`, and future runs of
+`C:\Users\23028727\gvhmr_workspace\Bailando\live_perf.py` now write that Unity
+JSON automatically after model inference. While Unity is in Play Mode, press `B`
+to reload the latest JSON without rebuilding the scene.
+
+Unity does not listen to the microphone directly in this comparison scene. The
+Max/Mixamo side listens for OSC drum messages on UDP port `7000`. If Max is not
+sending `/doum`, `/tek`, `/ka`, or `/trillo`, the scene uses a small built-in
+test pattern so the Mixamo side can still be checked. Press `1`, `2`, `3`, or
+`4` in Play Mode to manually trigger those test strokes.
