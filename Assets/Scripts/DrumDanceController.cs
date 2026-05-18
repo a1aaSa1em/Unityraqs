@@ -9,7 +9,8 @@ public class DrumDanceController : MonoBehaviour
     public enum DanceMode
     {
         ImmediateReactions,
-        BufferedPhrases
+        BufferedPhrases,
+        RhythmPatterns
     }
 
     [Serializable]
@@ -25,7 +26,7 @@ public class DrumDanceController : MonoBehaviour
         [Min(1)]
         public int Weight = 1;
 
-        [Tooltip("Optional stroke this phrase is best for: Any, Doum, Tek, Ka, or Trillo.")]
+        [Tooltip("Optional cue this phrase is best for: Any, Doum, Tek, Ka, Trillo, Sparse, Groove, Burst, or Roll.")]
         public string PreferredStroke = "Any";
     }
 
@@ -85,6 +86,19 @@ public class DrumDanceController : MonoBehaviour
 
     [Tooltip("Keep the last phrase moving while the next buffer is being collected.")]
     public bool HoldPhraseUntilNextPhrase = true;
+
+    [Header("Rhythm Pattern Mode")]
+    [Tooltip("Hits closer than this are treated as part of a burst or roll.")]
+    public float FastGapSeconds = 0.22f;
+
+    [Tooltip("Average gap below this, with enough hits, counts as a roll.")]
+    public float RollAverageGapSeconds = 0.18f;
+
+    [Tooltip("How many hits make a dense roll pattern.")]
+    public int RollMinimumHits = 5;
+
+    [Tooltip("How many hits make a short burst pattern.")]
+    public int BurstMinimumHits = 3;
 
     [Header("Curated Phrase Pools")]
     [Tooltip("Use these for grounded hip/belly material. Add only clips that look related.")]
@@ -232,6 +246,122 @@ public class DrumDanceController : MonoBehaviour
             "accent_belly_final_2");
     }
 
+    [ContextMenu("Fill Ch29 Phrase Pools")]
+    private void FillCh29PhrasePools()
+    {
+        PhrasePools.Clear();
+
+        AddPhrase("Ch29 belly dance flow", "Any", 5,
+            "Ch29_nonPBR_Belly_Dance_phrase_01",
+            "Ch29_nonPBR_Belly_Dance_phrase_02",
+            "Ch29_nonPBR_Belly_Dance_phrase_03",
+            "Ch29_nonPBR_Belly_Dance_phrase_04",
+            "Ch29_nonPBR_Belly_Dance_phrase_05",
+            "Ch29_nonPBR_Belly_Dance_phrase_06",
+            "Ch29_nonPBR_Belly_Dance_phrase_07",
+            "Ch29_nonPBR_Belly_Dance_phrase_08",
+            "Ch29_nonPBR_Belly_Dance_phrase_09",
+            "Ch29_nonPBR_Belly_Dance_phrase_10");
+
+        AddPhrase("Ch29 bellydancing phrases", "Doum", 4,
+            "Ch29_nonPBR_Bellydancing_phrase_01",
+            "Ch29_nonPBR_Bellydancing_phrase_02",
+            "Ch29_nonPBR_Bellydancing_phrase_03",
+            "Ch29_nonPBR_Bellydancing_phrase_04",
+            "Ch29_nonPBR_Bellydancing_phrase_05",
+            "Ch29_nonPBR_Bellydancing_phrase_06",
+            "Ch29_nonPBR_Bellydancing_phrase_07",
+            "Ch29_nonPBR_Bellydancing_phrase_08",
+            "Ch29_nonPBR_Bellydancing_phrase_09",
+            "Ch29_nonPBR_Bellydancing_phrase_10",
+            "Ch29_nonPBR_Bellydancing_phrase_11",
+            "Ch29_nonPBR_Bellydancing_phrase_12",
+            "Ch29_nonPBR_Bellydancing_phrase_13");
+
+        AddPhrase("Ch29 dancing accents", "Tek", 2,
+            "Ch29_nonPBR_Dancing_phrase_01",
+            "Ch29_nonPBR_Dancing_phrase_02",
+            "Ch29_nonPBR_Dancing_phrase_03",
+            "Ch29_nonPBR_Dancing_phrase_04",
+            "Ch29_nonPBR_Dancing_phrase_05",
+            "Ch29_nonPBR_Dancing_phrase_06",
+            "Ch29_nonPBR_Dancing_phrase_07",
+            "Ch29_nonPBR_Dancing_phrase_08",
+            "Ch29_nonPBR_Dancing_phrase_09",
+            "Ch29_nonPBR_Dancing_phrase_10",
+            "Ch29_nonPBR_Dancing_phrase_11");
+
+        AddPhrase("Ch29 ornaments", "Trillo", 1,
+            "Ch29_nonPBR_Belly_Dance_1_phrase_01",
+            "Ch29_nonPBR_Belly_Dance_1_phrase_02",
+            "Ch29_nonPBR_Belly_Dance_1_phrase_03",
+            "Ch29_nonPBR_Belly_Dance_1_phrase_04",
+            "Ch29_nonPBR_Belly_Dance_1_phrase_05",
+            "Ch29_nonPBR_Belly_Dance_1_phrase_06",
+            "Ch29_nonPBR_Belly_Dance_1_phrase_07",
+            "Ch29_nonPBR_Belly_Dance_1_phrase_08",
+            "Ch29_nonPBR_Belly_Dance_1_phrase_09",
+            "Ch29_nonPBR_Belly_Dance_1_phrase_10");
+    }
+
+    [ContextMenu("Fill Ch29 Rhythm Pattern Pools")]
+    private void FillCh29RhythmPatternPools()
+    {
+        PhrasePools.Clear();
+
+        AddPhrase("Flow phrases", "Any", 3,
+            "Ch29_nonPBR_Belly_Dance_phrase_01",
+            "Ch29_nonPBR_Belly_Dance_phrase_02",
+            "Ch29_nonPBR_Belly_Dance_phrase_03",
+            "Ch29_nonPBR_Belly_Dance_phrase_04",
+            "Ch29_nonPBR_Belly_Dance_phrase_05",
+            "Ch29_nonPBR_Belly_Dance_phrase_06",
+            "Ch29_nonPBR_Belly_Dance_phrase_07",
+            "Ch29_nonPBR_Belly_Dance_phrase_08",
+            "Ch29_nonPBR_Belly_Dance_phrase_09",
+            "Ch29_nonPBR_Belly_Dance_phrase_10");
+
+        AddPhrase("Sparse phrases", "Sparse", 4,
+            "Ch29_nonPBR_Belly_Dance_phrase_01",
+            "Ch29_nonPBR_Belly_Dance_phrase_03",
+            "Ch29_nonPBR_Belly_Dance_phrase_05",
+            "Ch29_nonPBR_Bellydancing_phrase_01",
+            "Ch29_nonPBR_Bellydancing_phrase_04",
+            "Ch29_nonPBR_Bellydancing_phrase_08");
+
+        AddPhrase("Groove phrases", "Groove", 5,
+            "Ch29_nonPBR_Bellydancing_phrase_02",
+            "Ch29_nonPBR_Bellydancing_phrase_03",
+            "Ch29_nonPBR_Bellydancing_phrase_05",
+            "Ch29_nonPBR_Bellydancing_phrase_06",
+            "Ch29_nonPBR_Bellydancing_phrase_07",
+            "Ch29_nonPBR_Bellydancing_phrase_09",
+            "Ch29_nonPBR_Bellydancing_phrase_10",
+            "Ch29_nonPBR_Bellydancing_phrase_11",
+            "Ch29_nonPBR_Bellydancing_phrase_12",
+            "Ch29_nonPBR_Bellydancing_phrase_13");
+
+        AddPhrase("Burst phrases", "Burst", 4,
+            "Ch29_nonPBR_Dancing_phrase_01",
+            "Ch29_nonPBR_Dancing_phrase_02",
+            "Ch29_nonPBR_Dancing_phrase_03",
+            "Ch29_nonPBR_Dancing_phrase_04",
+            "Ch29_nonPBR_Dancing_phrase_05",
+            "Ch29_nonPBR_Dancing_phrase_06");
+
+        AddPhrase("Roll phrases", "Roll", 4,
+            "Ch29_nonPBR_Dancing_phrase_07",
+            "Ch29_nonPBR_Dancing_phrase_08",
+            "Ch29_nonPBR_Dancing_phrase_09",
+            "Ch29_nonPBR_Dancing_phrase_10",
+            "Ch29_nonPBR_Dancing_phrase_11",
+            "Ch29_nonPBR_Belly_Dance_1_phrase_06",
+            "Ch29_nonPBR_Belly_Dance_1_phrase_07",
+            "Ch29_nonPBR_Belly_Dance_1_phrase_08",
+            "Ch29_nonPBR_Belly_Dance_1_phrase_09",
+            "Ch29_nonPBR_Belly_Dance_1_phrase_10");
+    }
+
     private void AddPhrase(string phraseName, string preferredStroke, int weight, params string[] states)
     {
         PhrasePools.Add(new DancePhrase
@@ -258,7 +388,7 @@ public class DrumDanceController : MonoBehaviour
             ProcessStroke(strokeType, true);
         }
 
-        if (Mode == DanceMode.BufferedPhrases)
+        if (Mode == DanceMode.BufferedPhrases || Mode == DanceMode.RhythmPatterns)
         {
             TryFlushPhraseBuffer();
         }
@@ -580,8 +710,8 @@ public class DrumDanceController : MonoBehaviour
 
     private void PlayBufferedPhrase()
     {
-        string dominantStroke = GetDominantStroke();
-        string chosenState = PickPhraseState(dominantStroke);
+        string phraseCue = Mode == DanceMode.RhythmPatterns ? GetRhythmPatternCue() : GetDominantStroke();
+        string chosenState = PickPhraseState(phraseCue);
 
         if (string.IsNullOrEmpty(chosenState))
         {
@@ -590,7 +720,7 @@ public class DrumDanceController : MonoBehaviour
             return;
         }
 
-        Debug.Log($"Phrase [{dominantStroke}, {phraseHits.Count} hits] -> {chosenState}");
+        Debug.Log($"Phrase [{phraseCue}, {phraseHits.Count} hits] -> {chosenState}");
 
         if (!CrossFadeState(chosenState, PhraseCrossfade))
         {
@@ -654,6 +784,52 @@ public class DrumDanceController : MonoBehaviour
         }
 
         return "Doum";
+    }
+
+    private string GetRhythmPatternCue()
+    {
+        if (phraseHits.Count <= 1)
+        {
+            return "Sparse";
+        }
+
+        float firstTime = phraseHits[0].Time;
+        float lastTime = phraseHits[phraseHits.Count - 1].Time;
+        float duration = Mathf.Max(0.01f, lastTime - firstTime);
+        float averageGap = duration / Mathf.Max(1, phraseHits.Count - 1);
+        int fastGaps = 0;
+
+        for (int i = 1; i < phraseHits.Count; i++)
+        {
+            float gap = phraseHits[i].Time - phraseHits[i - 1].Time;
+
+            if (gap <= FastGapSeconds)
+            {
+                fastGaps++;
+            }
+        }
+
+        if (phraseHits.Count >= RollMinimumHits && averageGap <= RollAverageGapSeconds)
+        {
+            return "Roll";
+        }
+
+        if (fastGaps >= RollMinimumHits - 1)
+        {
+            return "Roll";
+        }
+
+        if (phraseHits.Count >= BurstMinimumHits && duration <= 0.9f)
+        {
+            return "Burst";
+        }
+
+        if (phraseHits.Count <= 2 && duration > 0.65f)
+        {
+            return "Sparse";
+        }
+
+        return "Groove";
     }
 
     private string PickPhraseState(string dominantStroke)
