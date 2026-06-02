@@ -1,0 +1,28 @@
+Unity Editor version:    6000.4.3f1 (39d1a88d4dd1)
+Branch:                  6000.4/staging
+Build type:              Release
+Batch mode:              YES
+macOS version:           Version 15.5 (Build 24F74)
+Darwin version:          24.5.0
+Architecture:            arm64
+Running under Rosetta:   NO
+Available memory:        8192 MB
+Date:                    2026-05-20T15:51:28Z
+[Licensing::Module] Trying to connect to existing licensing client channel...
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-alaasalem" at "2026-05-20T15:51:28.849379Z"
+Launching external process: /Applications/Unity/Hub/Editor/6000.4.3f1/Unity.app/Contents/Helpers/PackageManager/Server/UnityPackageManager
+
+COMMAND LINE ARGUMENTS:
+/Applications/Unity/Hub/Editor/6000.4.3f1/Unity.app/Contents/MacOS/Unity
+-batchmode
+-nographics
+-projectPath
+/Users/alaasalem/Downloads/Raqs Model
+-executeMethod
+ImportLatestMixamoDance.RunForBatch
+-quit
+-logFile
+/Users/alaasalem/Downloads/Raqs Model/import-latest-mixamo.log
+Successfully changed project path to: /Users/alaasalem/Downloads/Raqs Model
+/Users/alaasalem/Downloads/Raqs Model
+[Package Manager] Server process was shutdown

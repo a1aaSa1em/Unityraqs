@@ -1,11 +1,11 @@
-using System.IO;
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEngine;
 
 public static class AddRaqsBellyStates
 {
-    private const string AnimationFolder = "Assets/Animations/FBX Dance data set";
+    private const string AnimationFolder = "Assets/Animations/Raqs Sliced Source";
 
     [MenuItem("Tools/Raqs/Add Belly FBX States To Selected Controller")]
     public static void AddBellyStates()
@@ -33,37 +33,29 @@ public static class AddRaqsBellyStates
         foreach (string guid in AssetDatabase.FindAssets("t:Model", new[] { AnimationFolder }))
         {
             string path = AssetDatabase.GUIDToAssetPath(guid);
-            string stateName = Path.GetFileNameWithoutExtension(path);
+            List<AnimationClip> clips = FindLatestSlicedClips(path);
 
-            if (!IsBellyStateName(stateName))
+            foreach (AnimationClip clip in clips)
             {
-                continue;
-            }
+                string stateName = clip.name;
 
-            if (StateExists(stateMachine, stateName))
-            {
-                skipped++;
-                continue;
-            }
+                if (StateExists(stateMachine, stateName))
+                {
+                    skipped++;
+                    continue;
+                }
 
-            AnimationClip clip = FindFirstAnimationClip(path);
+                AnimatorState state = stateMachine.AddState(stateName, new Vector3(450 + x * 220, 120 + y * 60, 0));
+                state.motion = clip;
 
-            if (clip == null)
-            {
-                skipped++;
-                continue;
-            }
+                added++;
+                y++;
 
-            AnimatorState state = stateMachine.AddState(stateName, new Vector3(450 + x * 220, 120 + y * 60, 0));
-            state.motion = clip;
-
-            added++;
-            y++;
-
-            if (y >= 12)
-            {
-                y = 0;
-                x++;
+                if (y >= 12)
+                {
+                    y = 0;
+                    x++;
+                }
             }
         }
 
@@ -72,19 +64,16 @@ public static class AddRaqsBellyStates
 
         EditorUtility.DisplayDialog(
             "Raqs states added",
-            $"Added {added} belly/hip states to {controller.name}.\nSkipped {skipped} states that already existed or had no clip.",
+            $"Added {added} latest sliced Ch29 phrase states to {controller.name}.\nSkipped {skipped} states that already existed.",
             "OK"
         );
     }
 
-    private static bool IsBellyStateName(string stateName)
+    private static bool IsLatestSlicedClipName(string stateName)
     {
-        string lowerName = stateName.ToLowerInvariant();
-
-        return lowerName.StartsWith("belly") ||
-               lowerName.StartsWith("accent_belly") ||
-               lowerName == "hip_drops_double" ||
-               lowerName.Contains("@belly");
+        return !string.IsNullOrEmpty(stateName) &&
+               stateName.StartsWith("Ch29_nonPBR_", System.StringComparison.Ordinal) &&
+               stateName.Contains("_phrase_");
     }
 
     private static bool StateExists(AnimatorStateMachine stateMachine, string stateName)
@@ -100,20 +89,23 @@ public static class AddRaqsBellyStates
         return false;
     }
 
-    private static AnimationClip FindFirstAnimationClip(string assetPath)
+    private static List<AnimationClip> FindLatestSlicedClips(string assetPath)
     {
+        List<AnimationClip> clips = new List<AnimationClip>();
         Object[] assets = AssetDatabase.LoadAllAssetRepresentationsAtPath(assetPath);
 
         foreach (Object asset in assets)
         {
             AnimationClip clip = asset as AnimationClip;
 
-            if (clip != null && !clip.name.StartsWith("__preview__", System.StringComparison.OrdinalIgnoreCase))
+            if (clip != null &&
+                !clip.name.StartsWith("__preview__", System.StringComparison.OrdinalIgnoreCase) &&
+                IsLatestSlicedClipName(clip.name))
             {
-                return clip;
+                clips.Add(clip);
             }
         }
 
-        return null;
+        return clips;
     }
 }

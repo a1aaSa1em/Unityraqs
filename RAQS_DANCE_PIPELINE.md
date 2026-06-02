@@ -25,6 +25,38 @@ Recommended values:
 
 This collects a short rhythm window from Max, finds the dominant stroke, then chooses one curated phrase. The movement should feel more like a dance sentence and less like random clips.
 
+## Stroke-count showcase phrases
+
+The controller also has a stroke-count choreography layer for demos. With `UseStrokeCountPhrases` enabled and `CountedPhraseHitTarget` set to `8`, Unity waits until the current phrase buffer reaches 8 drum hits, then plays a bigger curated showcase move. This makes the character feel like it is responding to a musical phrase instead of firing one small animation per hit.
+
+Recommended values:
+
+- `UseStrokeCountPhrases`: enabled
+- `CountedPhraseHitTarget`: `8`
+- `PlayCountPhraseAsSoonAsReady`: enabled
+- `MaximumCountedPhraseHits`: `16`
+- `PhrasePlaySeconds`: `2.5` to `3.0`
+- `PhraseCrossfade`: `0.25` to `0.35`
+
+If `StrokeCountPhrases` is empty, the script auto-fills Ch29 4/8/12/16 showcase presets at runtime. The primary trigger is still 8 hits, so the 4-hit entries act as optional inspector material rather than interrupting the default 8-hit phrase.
+
+## Tek and trillo flavour
+
+Max can send more specific OSC addresses when available:
+
+- `/doum` -> grounded hip/drop phrases
+- `/tek` -> sharper accent phrases
+- `/ka` -> sway/secondary accent phrases
+- `/trillo` -> roll/flourish phrases
+
+Unity also has a fallback for trillo: if Max only sends repeated `/doum` hits but they arrive very quickly, `InferTrilloFromFastHits` treats the phrase as a trillo/roll. The useful defaults are:
+
+- `InferTrilloFromFastHits`: enabled
+- `InferredTrilloAverageGapSeconds`: `0.16`
+- `InferredTrilloMinimumFastGaps`: `4`
+
+This means a fast drum roll can still trigger a roll/flourish phrase even before the Max patch has perfect stroke classification.
+
 ## Recording a drum phrase
 
 While Unity is in Play Mode:
@@ -67,6 +99,8 @@ The Max side should classify the hit first, then send one of the four OSC addres
 - Bright/high hit -> `/tek`
 - Secondary sharp hit -> `/ka`
 - Fast repeated roll -> `/trillo`
+
+For `doum` vs `tek`, spectral centroid was not enough on its own. The more useful Max features were roll-off and spread: `doum` sits lower/heavier, while `tek` has brighter and more distributed high-frequency energy. Use those features to choose the OSC address, then let Unity handle the phrase-level movement.
 
 Avoid sending a new OSC message every audio frame. Send one message per detected hit, then let the Unity phrase buffer organize those hits.
 

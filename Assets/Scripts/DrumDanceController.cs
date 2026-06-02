@@ -43,6 +43,27 @@ public class DrumDanceController : MonoBehaviour
         }
     }
 
+    [Serializable]
+    public class StrokeCountPhrase
+    {
+        [Tooltip("Inspector label only.")]
+        public string Name = "8-hit phrase";
+
+        [Tooltip("When the current rhythm buffer reaches this many strokes, this phrase group can fire.")]
+        [Min(1)]
+        public int StrokeCount = 8;
+
+        [Tooltip("Animator state names for this stroke-count phrase. Keep these visually strong.")]
+        public List<string> States = new List<string>();
+
+        [Tooltip("Higher values make this phrase more likely when multiple groups use the same count.")]
+        [Min(1)]
+        public int Weight = 1;
+
+        [Tooltip("Optional dominant stroke filter: Any, Doum, Tek, Ka, Trillo, Sparse, Groove, Burst, or Roll.")]
+        public string PreferredStroke = "Any";
+    }
+
     private struct StrokeHit
     {
         public string Type;
@@ -78,6 +99,9 @@ public class DrumDanceController : MonoBehaviour
     [Tooltip("Minimum hits needed before a buffered phrase can be played.")]
     public int MinimumHitsForPhrase = 1;
 
+    [Tooltip("Starts a phrase as soon as the first valid hit arrives. Keep this on for live demos so the character visibly reacts to sound.")]
+    public bool PlayPhraseImmediatelyOnHit = true;
+
     [Tooltip("How long a phrase should play before the next buffered phrase is allowed to replace it.")]
     public float PhrasePlaySeconds = 2.5f;
 
@@ -100,11 +124,46 @@ public class DrumDanceController : MonoBehaviour
     [Tooltip("How many hits make a short burst pattern.")]
     public int BurstMinimumHits = 3;
 
+    [Tooltip("Treat very fast repeated hits as Trillo even if Max sends them as /doum.")]
+    public bool InferTrilloFromFastHits = true;
+
+    [Tooltip("Average gap below this is interpreted as Trillo/roll timing.")]
+    public float InferredTrilloAverageGapSeconds = 0.16f;
+
+    [Tooltip("At least this many fast gaps are needed before a phrase is treated as Trillo.")]
+    public int InferredTrilloMinimumFastGaps = 4;
+
+    [Header("Stroke Count Choreography")]
+    [Tooltip("When enabled, the controller fires bigger showcase moves after exact stroke counts such as 4, 8, 12, or 16.")]
+    public bool UseStrokeCountPhrases = true;
+
+    [Tooltip("If true, hitting a configured stroke count plays that phrase immediately, instead of waiting for silence or the full buffer window.")]
+    public bool PlayCountPhraseAsSoonAsReady = true;
+
+    [Tooltip("Default number of strokes that triggers a showcase move. Set to 8 for 'every 8 strokes, play a bigger phrase'.")]
+    [Min(1)]
+    public int CountedPhraseHitTarget = 8;
+
+    [Tooltip("Maximum count to keep in the current rhythm phrase before forcing a phrase selection.")]
+    public int MaximumCountedPhraseHits = 16;
+
+    [Tooltip("Curated phrase pools selected by number of strokes in the current phrase.")]
+    public List<StrokeCountPhrase> StrokeCountPhrases = new List<StrokeCountPhrase>();
+
+    [Tooltip("If StrokeCountPhrases is empty at runtime, automatically add the Ch29 stroke-count showcase presets.")]
+    public bool AutoFillCountShowcaseIfEmpty = true;
+
     [Header("Curated Phrase Pools")]
     [Tooltip("Use these for grounded hip/belly material. Add only clips that look related.")]
     public List<DancePhrase> PhrasePools = new List<DancePhrase>();
 
+    [Tooltip("When enabled, strips every animation choice that is not one of the latest Ch29 sliced phrase clips.")]
+    public bool UseLatestSlicedCh29ClipsOnly = true;
+
     [Header("Beat Response")]
+    [Tooltip("Normal animation playback speed. Raise this if retargeted clips feel too slow on the current character.")]
+    public float BaseAnimatorSpeed = 1.0f;
+
     [Tooltip("Makes each incoming hit briefly push the current animation speed so the dance still reacts on the beat.")]
     public bool PulseAnimatorSpeedOnHits = true;
 
@@ -115,6 +174,13 @@ public class DrumDanceController : MonoBehaviour
     public float TekSpeedPulse = 1.18f;
     public float KaSpeedPulse = 1.22f;
     public float TrilloSpeedPulse = 1.45f;
+
+    [Header("Debug")]
+    [Tooltip("Logs each OSC hit as soon as Unity receives it, before phrase buffering.")]
+    public bool LogIncomingOsc = true;
+
+    [Tooltip("During Play Mode, press D/T/K/L to test Doum/Tek/Ka/Trillo without Max.")]
+    public bool EnableKeyboardDebug = true;
 
     [Header("Record / Playback")]
     [Tooltip("Press this during Play Mode to start/stop recording OSC hits from Max.")]
@@ -182,10 +248,23 @@ public class DrumDanceController : MonoBehaviour
     private float playbackStartTime = -1f;
     private int playbackIndex = 0;
     private string lastPhraseState = null;
+    private string lastCountPhraseState = null;
     private bool isDancing = false;
 
     void Start()
     {
+        targetAnimatorSpeed = BaseAnimatorSpeed;
+
+        if (AutoFillCountShowcaseIfEmpty && UseStrokeCountPhrases && (StrokeCountPhrases == null || StrokeCountPhrases.Count == 0))
+        {
+            FillCh29StrokeCountShowcase();
+        }
+
+        if (UseLatestSlicedCh29ClipsOnly)
+        {
+            KeepLatestSlicedCh29ClipsOnly();
+        }
+
         server = new OscServer(Port);
 
         server.TryAddMethod("/doum", OnDoumReceived);
@@ -201,49 +280,8 @@ public class DrumDanceController : MonoBehaviour
     [ContextMenu("Fill Suggested Belly Phrase Pools")]
     private void FillSuggestedBellyPhrasePools()
     {
-        PhrasePools.Clear();
-
-        AddPhrase("Grounded belly flow", "Any", 4,
-            "Bellydancing",
-            "Belly Dance",
-            "belly_continuous",
-            "belly_b_continuous",
-            "belly_a_flow",
-            "belly_extended");
-
-        AddPhrase("Doum hip drops", "Doum", 3,
-            "hip_drops_double",
-            "belly_a_dropA",
-            "belly_a_dropB",
-            "accent_belly_pop_1",
-            "accent_belly_pop_2");
-
-        AddPhrase("Tek rolls", "Tek", 2,
-            "accent_belly_roll_1",
-            "accent_belly_roll_2",
-            "belly_roll_slow",
-            "belly_roll_varied",
-            "belly_a_roll_open",
-            "belly_a_roll_mid");
-
-        AddPhrase("Ka sways", "Ka", 2,
-            "accent_belly_sway_1",
-            "accent_belly_sway_2",
-            "belly_a_undulation",
-            "belly_b_open",
-            "belly_b_returnA",
-            "belly_b_returnB");
-
-        AddPhrase("Trillo ornaments", "Trillo", 1,
-            "accent_bellydance_1",
-            "accent_bellydance_2",
-            "accent_bellydance_3",
-            "accent_bellydance_4",
-            "accent_bellydance_5",
-            "accent_bellydance_6",
-            "accent_bellydance_7",
-            "accent_belly_final_1",
-            "accent_belly_final_2");
+        FillCh29PhrasePools();
+        KeepLatestSlicedCh29ClipsOnly();
     }
 
     [ContextMenu("Fill Ch29 Phrase Pools")]
@@ -251,52 +289,52 @@ public class DrumDanceController : MonoBehaviour
     {
         PhrasePools.Clear();
 
-        AddPhrase("Ch29 belly dance flow", "Any", 5,
+        AddPhrase("Ch29 neutral flow", "Any", 3,
             "Ch29_nonPBR_Belly_Dance_phrase_01",
-            "Ch29_nonPBR_Belly_Dance_phrase_02",
             "Ch29_nonPBR_Belly_Dance_phrase_03",
             "Ch29_nonPBR_Belly_Dance_phrase_04",
             "Ch29_nonPBR_Belly_Dance_phrase_05",
-            "Ch29_nonPBR_Belly_Dance_phrase_06",
             "Ch29_nonPBR_Belly_Dance_phrase_07",
-            "Ch29_nonPBR_Belly_Dance_phrase_08",
             "Ch29_nonPBR_Belly_Dance_phrase_09",
-            "Ch29_nonPBR_Belly_Dance_phrase_10");
-
-        AddPhrase("Ch29 bellydancing phrases", "Doum", 4,
+            "Ch29_nonPBR_Belly_Dance_phrase_10",
             "Ch29_nonPBR_Bellydancing_phrase_01",
-            "Ch29_nonPBR_Bellydancing_phrase_02",
             "Ch29_nonPBR_Bellydancing_phrase_03",
             "Ch29_nonPBR_Bellydancing_phrase_04",
-            "Ch29_nonPBR_Bellydancing_phrase_05",
             "Ch29_nonPBR_Bellydancing_phrase_06",
-            "Ch29_nonPBR_Bellydancing_phrase_07",
-            "Ch29_nonPBR_Bellydancing_phrase_08",
-            "Ch29_nonPBR_Bellydancing_phrase_09",
-            "Ch29_nonPBR_Bellydancing_phrase_10",
             "Ch29_nonPBR_Bellydancing_phrase_11",
             "Ch29_nonPBR_Bellydancing_phrase_12",
-            "Ch29_nonPBR_Bellydancing_phrase_13");
+            "Ch29_nonPBR_Bellydancing_phrase_13",
+            "Ch29_nonPBR_Belly_Dance_1_phrase_01",
+            "Ch29_nonPBR_Belly_Dance_1_phrase_02",
+            "Ch29_nonPBR_Belly_Dance_1_phrase_03",
+            "Ch29_nonPBR_Belly_Dance_1_phrase_04",
+            "Ch29_nonPBR_Belly_Dance_1_phrase_05");
 
-        AddPhrase("Ch29 dancing accents", "Tek", 2,
+        AddPhrase("Ch29 grounded hip drops", "Doum", 5,
+            "Ch29_nonPBR_Belly_Dance_phrase_02",
+            "Ch29_nonPBR_Bellydancing_phrase_02",
+            "Ch29_nonPBR_Bellydancing_phrase_05",
+            "Ch29_nonPBR_Bellydancing_phrase_10");
+
+        AddPhrase("Ch29 sharp tek accents", "Tek", 4,
             "Ch29_nonPBR_Dancing_phrase_01",
             "Ch29_nonPBR_Dancing_phrase_02",
             "Ch29_nonPBR_Dancing_phrase_03",
             "Ch29_nonPBR_Dancing_phrase_04",
             "Ch29_nonPBR_Dancing_phrase_05",
-            "Ch29_nonPBR_Dancing_phrase_06",
+            "Ch29_nonPBR_Dancing_phrase_06");
+
+        AddPhrase("Ch29 fast shimmy and roll phrases", "Trillo", 5,
+            "Ch29_nonPBR_Belly_Dance_phrase_06",
+            "Ch29_nonPBR_Belly_Dance_phrase_08",
+            "Ch29_nonPBR_Bellydancing_phrase_07",
+            "Ch29_nonPBR_Bellydancing_phrase_08",
+            "Ch29_nonPBR_Bellydancing_phrase_09",
             "Ch29_nonPBR_Dancing_phrase_07",
             "Ch29_nonPBR_Dancing_phrase_08",
             "Ch29_nonPBR_Dancing_phrase_09",
             "Ch29_nonPBR_Dancing_phrase_10",
-            "Ch29_nonPBR_Dancing_phrase_11");
-
-        AddPhrase("Ch29 ornaments", "Trillo", 1,
-            "Ch29_nonPBR_Belly_Dance_1_phrase_01",
-            "Ch29_nonPBR_Belly_Dance_1_phrase_02",
-            "Ch29_nonPBR_Belly_Dance_1_phrase_03",
-            "Ch29_nonPBR_Belly_Dance_1_phrase_04",
-            "Ch29_nonPBR_Belly_Dance_1_phrase_05",
+            "Ch29_nonPBR_Dancing_phrase_11",
             "Ch29_nonPBR_Belly_Dance_1_phrase_06",
             "Ch29_nonPBR_Belly_Dance_1_phrase_07",
             "Ch29_nonPBR_Belly_Dance_1_phrase_08",
@@ -362,6 +400,71 @@ public class DrumDanceController : MonoBehaviour
             "Ch29_nonPBR_Belly_Dance_1_phrase_10");
     }
 
+    [ContextMenu("Fill Ch29 Stroke Count Showcase")]
+    private void FillCh29StrokeCountShowcase()
+    {
+        StrokeCountPhrases.Clear();
+
+        AddCountPhrase("4-hit neutral setup", 4, "Any", 3,
+            "Ch29_nonPBR_Belly_Dance_phrase_01",
+            "Ch29_nonPBR_Belly_Dance_phrase_03",
+            "Ch29_nonPBR_Bellydancing_phrase_01",
+            "Ch29_nonPBR_Bellydancing_phrase_04");
+
+        AddCountPhrase("8-hit neutral flow", 8, "Any", 3,
+            "Ch29_nonPBR_Belly_Dance_phrase_04",
+            "Ch29_nonPBR_Belly_Dance_phrase_05",
+            "Ch29_nonPBR_Belly_Dance_phrase_07",
+            "Ch29_nonPBR_Bellydancing_phrase_03",
+            "Ch29_nonPBR_Bellydancing_phrase_06",
+            "Ch29_nonPBR_Belly_Dance_1_phrase_01",
+            "Ch29_nonPBR_Belly_Dance_1_phrase_02",
+            "Ch29_nonPBR_Belly_Dance_1_phrase_03");
+
+        AddCountPhrase("8-hit doum drops", 8, "Doum", 4,
+            "Ch29_nonPBR_Belly_Dance_phrase_02",
+            "Ch29_nonPBR_Bellydancing_phrase_02",
+            "Ch29_nonPBR_Bellydancing_phrase_05",
+            "Ch29_nonPBR_Bellydancing_phrase_10");
+
+        AddCountPhrase("8-hit tek accents", 8, "Tek", 4,
+            "Ch29_nonPBR_Dancing_phrase_01",
+            "Ch29_nonPBR_Dancing_phrase_03",
+            "Ch29_nonPBR_Dancing_phrase_05",
+            "Ch29_nonPBR_Dancing_phrase_06");
+
+        AddCountPhrase("8-hit trillo roll", 8, "Trillo", 5,
+            "Ch29_nonPBR_Belly_Dance_phrase_06",
+            "Ch29_nonPBR_Belly_Dance_phrase_08",
+            "Ch29_nonPBR_Bellydancing_phrase_07",
+            "Ch29_nonPBR_Bellydancing_phrase_08",
+            "Ch29_nonPBR_Bellydancing_phrase_09",
+            "Ch29_nonPBR_Dancing_phrase_07",
+            "Ch29_nonPBR_Dancing_phrase_08",
+            "Ch29_nonPBR_Dancing_phrase_09",
+            "Ch29_nonPBR_Belly_Dance_1_phrase_06",
+            "Ch29_nonPBR_Belly_Dance_1_phrase_07");
+
+        AddCountPhrase("8-hit roll flourish", 8, "Roll", 5,
+            "Ch29_nonPBR_Dancing_phrase_08",
+            "Ch29_nonPBR_Dancing_phrase_10",
+            "Ch29_nonPBR_Dancing_phrase_11",
+            "Ch29_nonPBR_Belly_Dance_1_phrase_08");
+
+        AddCountPhrase("12-hit travelling phrase", 12, "Any", 3,
+            "Ch29_nonPBR_Dancing_phrase_07",
+            "Ch29_nonPBR_Dancing_phrase_08",
+            "Ch29_nonPBR_Dancing_phrase_09",
+            "Ch29_nonPBR_Belly_Dance_1_phrase_06");
+
+        AddCountPhrase("16-hit finale", 16, "Any", 2,
+            "Ch29_nonPBR_Dancing_phrase_10",
+            "Ch29_nonPBR_Dancing_phrase_11",
+            "Ch29_nonPBR_Belly_Dance_1_phrase_08",
+            "Ch29_nonPBR_Belly_Dance_1_phrase_09",
+            "Ch29_nonPBR_Belly_Dance_1_phrase_10");
+    }
+
     private void AddPhrase(string phraseName, string preferredStroke, int weight, params string[] states)
     {
         PhrasePools.Add(new DancePhrase
@@ -373,9 +476,64 @@ public class DrumDanceController : MonoBehaviour
         });
     }
 
+    private void AddCountPhrase(string phraseName, int strokeCount, string preferredStroke, int weight, params string[] states)
+    {
+        StrokeCountPhrases.Add(new StrokeCountPhrase
+        {
+            Name = phraseName,
+            StrokeCount = strokeCount,
+            PreferredStroke = preferredStroke,
+            Weight = weight,
+            States = new List<string>(states)
+        });
+    }
+
+    [ContextMenu("Keep Latest Sliced Ch29 Clips Only")]
+    private void KeepLatestSlicedCh29ClipsOnly()
+    {
+        FilterLatestSlicedClipList(DoumDanceStates);
+        FilterLatestSlicedClipList(TekDanceStates);
+        FilterLatestSlicedClipList(KaDanceStates);
+        FilterLatestSlicedClipList(TrilloDanceStates);
+
+        foreach (DancePhrase phrase in PhrasePools)
+        {
+            if (phrase != null)
+            {
+                FilterLatestSlicedClipList(phrase.States);
+            }
+        }
+
+        foreach (StrokeCountPhrase phrase in StrokeCountPhrases)
+        {
+            if (phrase != null)
+            {
+                FilterLatestSlicedClipList(phrase.States);
+            }
+        }
+    }
+
+    private void FilterLatestSlicedClipList(List<string> states)
+    {
+        if (states == null)
+        {
+            return;
+        }
+
+        states.RemoveAll(stateName => !IsLatestSlicedCh29PhraseName(stateName));
+    }
+
+    private bool IsLatestSlicedCh29PhraseName(string stateName)
+    {
+        return !string.IsNullOrEmpty(stateName) &&
+               stateName.StartsWith("Ch29_nonPBR_", StringComparison.Ordinal) &&
+               stateName.Contains("_phrase_");
+    }
+
     void Update()
     {
         HandleRecordingShortcuts();
+        HandleKeyboardDebug();
         ReplayRecordedPattern();
 
         while (triggerQueue.TryDequeue(out string strokeType))
@@ -401,6 +559,38 @@ public class DrumDanceController : MonoBehaviour
         }
     }
 
+    private void HandleKeyboardDebug()
+    {
+        if (!EnableKeyboardDebug)
+        {
+            return;
+        }
+
+        if (Input.GetKeyDown(KeyCode.D))
+        {
+            ProcessStroke("Doum", false);
+            Debug.Log("Keyboard debug hit: Doum");
+        }
+
+        if (Input.GetKeyDown(KeyCode.T))
+        {
+            ProcessStroke("Tek", false);
+            Debug.Log("Keyboard debug hit: Tek");
+        }
+
+        if (Input.GetKeyDown(KeyCode.K))
+        {
+            ProcessStroke("Ka", false);
+            Debug.Log("Keyboard debug hit: Ka");
+        }
+
+        if (Input.GetKeyDown(KeyCode.L))
+        {
+            ProcessStroke("Trillo", false);
+            Debug.Log("Keyboard debug hit: Trillo");
+        }
+    }
+
     private void ProcessStroke(string strokeType, bool canRecord)
     {
         if (canRecord && RecordLiveInput)
@@ -415,6 +605,14 @@ public class DrumDanceController : MonoBehaviour
         else
         {
             BufferStroke(strokeType);
+
+            bool countPhraseReady = IsCountPhraseReady();
+            bool shouldPlayImmediateFallback = PlayPhraseImmediatelyOnHit && !HasUsableCountPhrases();
+
+            if ((countPhraseReady || shouldPlayImmediateFallback) && phraseHits.Count >= MinimumHitsForPhrase && Time.time >= nextPhraseAllowedTime)
+            {
+                PlayBufferedPhrase();
+            }
         }
     }
 
@@ -696,11 +894,13 @@ public class DrumDanceController : MonoBehaviour
         }
 
         float now = Time.time;
+        bool countPhraseReady = IsCountPhraseReady();
         bool bufferFull = phraseStartTime > 0f && now - phraseStartTime >= PhraseBufferSeconds;
         bool rhythmPaused = lastHitTime > 0f && now - lastHitTime >= SilenceFlushSeconds;
+        bool countLimitReached = MaximumCountedPhraseHits > 0 && phraseHits.Count >= MaximumCountedPhraseHits;
         bool phraseCanChange = now >= nextPhraseAllowedTime;
 
-        if (!phraseCanChange || (!bufferFull && !rhythmPaused))
+        if (!phraseCanChange || (!countPhraseReady && !bufferFull && !rhythmPaused && !countLimitReached))
         {
             return;
         }
@@ -711,7 +911,17 @@ public class DrumDanceController : MonoBehaviour
     private void PlayBufferedPhrase()
     {
         string phraseCue = Mode == DanceMode.RhythmPatterns ? GetRhythmPatternCue() : GetDominantStroke();
-        string chosenState = PickPhraseState(phraseCue);
+        int rawHitCount = phraseHits.Count;
+        int hitCount = GetCountPhraseSelectionCount(rawHitCount);
+        string dominantStroke = GetDominantStroke();
+        string chosenState = PickCountPhraseState(hitCount, dominantStroke);
+        string phraseSource = "count";
+
+        if (string.IsNullOrEmpty(chosenState))
+        {
+            chosenState = PickPhraseState(phraseCue);
+            phraseSource = "cue";
+        }
 
         if (string.IsNullOrEmpty(chosenState))
         {
@@ -720,7 +930,7 @@ public class DrumDanceController : MonoBehaviour
             return;
         }
 
-        Debug.Log($"Phrase [{phraseCue}, {phraseHits.Count} hits] -> {chosenState}");
+        Debug.Log($"Phrase [{phraseSource}: {rawHitCount} hits, selected count {hitCount}, cue {phraseCue}, dominant {dominantStroke}] -> {chosenState}");
 
         if (!CrossFadeState(chosenState, PhraseCrossfade))
         {
@@ -739,8 +949,91 @@ public class DrumDanceController : MonoBehaviour
         lastHitTime = -1f;
     }
 
+    private bool IsCountPhraseReady()
+    {
+        if (!UseStrokeCountPhrases || !PlayCountPhraseAsSoonAsReady || StrokeCountPhrases == null || StrokeCountPhrases.Count == 0)
+        {
+            return false;
+        }
+
+        int hitCount = phraseHits.Count;
+
+        if (hitCount < CountedPhraseHitTarget)
+        {
+            return false;
+        }
+
+        int targetCount = GetCountPhraseSelectionCount(hitCount);
+
+        foreach (StrokeCountPhrase phrase in StrokeCountPhrases)
+        {
+            if (phrase != null && phrase.StrokeCount == targetCount && CountPhraseHasExistingState(phrase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private int GetCountPhraseSelectionCount(int hitCount)
+    {
+        if (HasCountPhraseForCount(hitCount))
+        {
+            return hitCount;
+        }
+
+        if (HasCountPhraseForCount(CountedPhraseHitTarget))
+        {
+            return CountedPhraseHitTarget;
+        }
+
+        return hitCount;
+    }
+
+    private bool HasCountPhraseForCount(int hitCount)
+    {
+        if (StrokeCountPhrases == null)
+        {
+            return false;
+        }
+
+        foreach (StrokeCountPhrase phrase in StrokeCountPhrases)
+        {
+            if (phrase != null && phrase.StrokeCount == hitCount && CountPhraseHasExistingState(phrase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool HasUsableCountPhrases()
+    {
+        if (!UseStrokeCountPhrases || StrokeCountPhrases == null || StrokeCountPhrases.Count == 0)
+        {
+            return false;
+        }
+
+        foreach (StrokeCountPhrase phrase in StrokeCountPhrases)
+        {
+            if (phrase != null && phrase.States != null && phrase.States.Count > 0 && CountPhraseHasExistingState(phrase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private string GetDominantStroke()
     {
+        if (InferTrilloFromFastHits && IsTrilloLikePattern())
+        {
+            return "Trillo";
+        }
+
         int doum = 0;
         int tek = 0;
         int ka = 0;
@@ -786,6 +1079,32 @@ public class DrumDanceController : MonoBehaviour
         return "Doum";
     }
 
+    private bool IsTrilloLikePattern()
+    {
+        if (phraseHits.Count < RollMinimumHits)
+        {
+            return false;
+        }
+
+        float firstTime = phraseHits[0].Time;
+        float lastTime = phraseHits[phraseHits.Count - 1].Time;
+        float duration = Mathf.Max(0.01f, lastTime - firstTime);
+        float averageGap = duration / Mathf.Max(1, phraseHits.Count - 1);
+        int fastGaps = 0;
+
+        for (int i = 1; i < phraseHits.Count; i++)
+        {
+            float gap = phraseHits[i].Time - phraseHits[i - 1].Time;
+
+            if (gap <= FastGapSeconds)
+            {
+                fastGaps++;
+            }
+        }
+
+        return averageGap <= InferredTrilloAverageGapSeconds || fastGaps >= InferredTrilloMinimumFastGaps;
+    }
+
     private string GetRhythmPatternCue()
     {
         if (phraseHits.Count <= 1)
@@ -811,12 +1130,12 @@ public class DrumDanceController : MonoBehaviour
 
         if (phraseHits.Count >= RollMinimumHits && averageGap <= RollAverageGapSeconds)
         {
-            return "Roll";
+            return "Trillo";
         }
 
         if (fastGaps >= RollMinimumHits - 1)
         {
-            return "Roll";
+            return "Trillo";
         }
 
         if (phraseHits.Count >= BurstMinimumHits && duration <= 0.9f)
@@ -834,7 +1153,8 @@ public class DrumDanceController : MonoBehaviour
 
     private string PickPhraseState(string dominantStroke)
     {
-        List<DancePhrase> candidates = new List<DancePhrase>();
+        List<DancePhrase> exactCandidates = new List<DancePhrase>();
+        List<DancePhrase> fallbackCandidates = new List<DancePhrase>();
 
         foreach (DancePhrase phrase in PhrasePools)
         {
@@ -843,23 +1163,98 @@ public class DrumDanceController : MonoBehaviour
                 continue;
             }
 
-            bool strokeMatches = string.Equals(phrase.PreferredStroke, "Any", StringComparison.OrdinalIgnoreCase) ||
-                                 string.Equals(phrase.PreferredStroke, dominantStroke, StringComparison.OrdinalIgnoreCase);
-
-            if (strokeMatches)
+            if (string.Equals(phrase.PreferredStroke, dominantStroke, StringComparison.OrdinalIgnoreCase) ||
+                (string.Equals(dominantStroke, "Trillo", StringComparison.OrdinalIgnoreCase) &&
+                 string.Equals(phrase.PreferredStroke, "Roll", StringComparison.OrdinalIgnoreCase)))
             {
-                candidates.Add(phrase);
+                exactCandidates.Add(phrase);
+            }
+            else if (string.Equals(phrase.PreferredStroke, "Any", StringComparison.OrdinalIgnoreCase))
+            {
+                fallbackCandidates.Add(phrase);
             }
         }
 
-        if (candidates.Count > 0)
+        if (exactCandidates.Count > 0)
         {
-            DancePhrase phrase = PickWeightedPhrase(candidates);
+            DancePhrase phrase = PickWeightedPhrase(exactCandidates);
+            return PickExistingStateFromList(phrase.States, lastPhraseState);
+        }
+
+        if (fallbackCandidates.Count > 0)
+        {
+            DancePhrase phrase = PickWeightedPhrase(fallbackCandidates);
             return PickExistingStateFromList(phrase.States, lastPhraseState);
         }
 
         List<string> fallbackPool = GetPoolForStroke(dominantStroke);
         return PickExistingStateFromList(fallbackPool, lastPhraseState);
+    }
+
+    private string PickCountPhraseState(int hitCount, string dominantStroke)
+    {
+        if (!UseStrokeCountPhrases || StrokeCountPhrases == null || StrokeCountPhrases.Count == 0)
+        {
+            return null;
+        }
+
+        List<StrokeCountPhrase> exactCandidates = new List<StrokeCountPhrase>();
+        List<StrokeCountPhrase> fallbackCandidates = new List<StrokeCountPhrase>();
+
+        foreach (StrokeCountPhrase phrase in StrokeCountPhrases)
+        {
+            if (phrase == null || phrase.States == null || phrase.States.Count == 0 || phrase.StrokeCount != hitCount || !CountPhraseHasExistingState(phrase))
+            {
+                continue;
+            }
+
+            if (string.Equals(phrase.PreferredStroke, dominantStroke, StringComparison.OrdinalIgnoreCase) ||
+                (string.Equals(dominantStroke, "Trillo", StringComparison.OrdinalIgnoreCase) &&
+                 string.Equals(phrase.PreferredStroke, "Roll", StringComparison.OrdinalIgnoreCase)))
+            {
+                exactCandidates.Add(phrase);
+            }
+            else if (string.Equals(phrase.PreferredStroke, "Any", StringComparison.OrdinalIgnoreCase))
+            {
+                fallbackCandidates.Add(phrase);
+            }
+        }
+
+        List<StrokeCountPhrase> candidates = exactCandidates.Count > 0 ? exactCandidates : fallbackCandidates;
+
+        if (candidates.Count == 0)
+        {
+            return null;
+        }
+
+        StrokeCountPhrase chosenPhrase = PickWeightedCountPhrase(candidates);
+        string chosenState = PickExistingStateFromList(chosenPhrase.States, lastCountPhraseState);
+        lastCountPhraseState = chosenState;
+        return chosenState;
+    }
+
+    private StrokeCountPhrase PickWeightedCountPhrase(List<StrokeCountPhrase> candidates)
+    {
+        int totalWeight = 0;
+
+        foreach (StrokeCountPhrase phrase in candidates)
+        {
+            totalWeight += Mathf.Max(1, phrase.Weight);
+        }
+
+        int roll = UnityEngine.Random.Range(0, totalWeight);
+
+        foreach (StrokeCountPhrase phrase in candidates)
+        {
+            roll -= Mathf.Max(1, phrase.Weight);
+
+            if (roll < 0)
+            {
+                return phrase;
+            }
+        }
+
+        return candidates[candidates.Count - 1];
     }
 
     private DancePhrase PickWeightedPhrase(List<DancePhrase> candidates)
@@ -929,6 +1324,7 @@ public class DrumDanceController : MonoBehaviour
         }
 
         LolaAnimator.CrossFadeInFixedTime(stateName, crossfadeSeconds, 0, 0f);
+        Debug.Log("Animator crossfade started: " + stateName);
         return true;
     }
 
@@ -970,6 +1366,24 @@ public class DrumDanceController : MonoBehaviour
         return false;
     }
 
+    private bool CountPhraseHasExistingState(StrokeCountPhrase phrase)
+    {
+        if (phrase == null || phrase.States == null)
+        {
+            return false;
+        }
+
+        foreach (string stateName in phrase.States)
+        {
+            if (HasAnimatorState(stateName))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private bool HasAnimatorState(string stateName)
     {
         if (LolaAnimator == null || string.IsNullOrEmpty(stateName))
@@ -994,19 +1408,19 @@ public class DrumDanceController : MonoBehaviour
         switch (strokeType)
         {
             case "Doum":
-                targetAnimatorSpeed = Mathf.Max(targetAnimatorSpeed, DoumSpeedPulse);
+                targetAnimatorSpeed = Mathf.Max(targetAnimatorSpeed, BaseAnimatorSpeed * DoumSpeedPulse);
                 break;
 
             case "Tek":
-                targetAnimatorSpeed = Mathf.Max(targetAnimatorSpeed, TekSpeedPulse);
+                targetAnimatorSpeed = Mathf.Max(targetAnimatorSpeed, BaseAnimatorSpeed * TekSpeedPulse);
                 break;
 
             case "Ka":
-                targetAnimatorSpeed = Mathf.Max(targetAnimatorSpeed, KaSpeedPulse);
+                targetAnimatorSpeed = Mathf.Max(targetAnimatorSpeed, BaseAnimatorSpeed * KaSpeedPulse);
                 break;
 
             case "Trillo":
-                targetAnimatorSpeed = Mathf.Max(targetAnimatorSpeed, TrilloSpeedPulse);
+                targetAnimatorSpeed = Mathf.Max(targetAnimatorSpeed, BaseAnimatorSpeed * TrilloSpeedPulse);
                 break;
         }
     }
@@ -1020,33 +1434,45 @@ public class DrumDanceController : MonoBehaviour
 
         if (!PulseAnimatorSpeedOnHits)
         {
-            LolaAnimator.speed = 1f;
-            targetAnimatorSpeed = 1f;
+            LolaAnimator.speed = BaseAnimatorSpeed;
+            targetAnimatorSpeed = BaseAnimatorSpeed;
             return;
         }
 
         LolaAnimator.speed = targetAnimatorSpeed;
-        targetAnimatorSpeed = Mathf.Lerp(targetAnimatorSpeed, 1f, Time.deltaTime * BeatPulseReturnSpeed);
+        targetAnimatorSpeed = Mathf.Lerp(targetAnimatorSpeed, BaseAnimatorSpeed, Time.deltaTime * BeatPulseReturnSpeed);
     }
 
     private void OnDoumReceived(OscMessageValues values)
     {
+        LogOscHit("Doum");
         triggerQueue.Enqueue("Doum");
     }
 
     private void OnTekReceived(OscMessageValues values)
     {
+        LogOscHit("Tek");
         triggerQueue.Enqueue("Tek");
     }
 
     private void OnKaReceived(OscMessageValues values)
     {
+        LogOscHit("Ka");
         triggerQueue.Enqueue("Ka");
     }
 
     private void OnTrilloReceived(OscMessageValues values)
     {
+        LogOscHit("Trillo");
         triggerQueue.Enqueue("Trillo");
+    }
+
+    private void LogOscHit(string strokeType)
+    {
+        if (LogIncomingOsc)
+        {
+            Debug.Log("OSC hit received: " + strokeType);
+        }
     }
 
     void OnDestroy()

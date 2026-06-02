@@ -280,6 +280,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Elmo Rigged
       objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: fff9e3442dfab410486e0edf473cc96d, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 5866666021909216657, guid: fff9e3442dfab410486e0edf473cc96d, type: 3}
       propertyPath: m_Controller
       value: 
@@ -293,11 +297,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: fff9e3442dfab410486e0edf473cc96d, type: 3}
---- !u!95 &19027280 stripped
-Animator:
-  m_CorrespondingSourceObject: {fileID: 5866666021909216657, guid: fff9e3442dfab410486e0edf473cc96d, type: 3}
-  m_PrefabInstance: {fileID: 19027279}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &44741651
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -971,6 +970,60 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 527287201}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1 &536938011
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 536938013}
+  - component: {fileID: 536938012}
+  m_Layer: 0
+  m_Name: HiResCapture
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &536938012
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 536938011}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ba96945d3fdb7403088dd0d78c84b47e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HiResCapture
+  captureCamera: {fileID: 0}
+  width: 3840
+  height: 2160
+  startFrame: 0
+  endFrame: 120
+  outputDir: Recordings
+  transparentBackground: 1
+  captureOnStart: 0
+  stillCaptureKey: 290
+  alternateStillCaptureKey: 120
+--- !u!4 &536938013
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 536938011}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.55869, y: 1.31113, z: 2.69}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &644927092
 GameObject:
   m_ObjectHideFlags: 0
@@ -1949,49 +2002,54 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 943624a81844f4bccad1e2cb2f5fb0bd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DrumDanceController
-  LolaAnimator: {fileID: 19027280}
+  LolaAnimator: {fileID: 1684172116}
   IdleStateName: Idle
   Port: 7000
   Mode: 1
   PhraseBufferSeconds: 1.5
   SilenceFlushSeconds: 0.55
   MinimumHitsForPhrase: 1
-  PhrasePlaySeconds: 2.4
-  PhraseCrossfade: 0.22
+  PlayPhraseImmediatelyOnHit: 1
+  PhrasePlaySeconds: 1.05
+  PhraseCrossfade: 0.08
   HoldPhraseUntilNextPhrase: 1
+  FastGapSeconds: 0.22
+  RollAverageGapSeconds: 0.18
+  RollMinimumHits: 5
+  BurstMinimumHits: 3
   PhrasePools:
-  - Name: Ch29 belly dance flow
+  - Name: Ch29 neutral flow
     States:
     - Ch29_nonPBR_Belly_Dance_phrase_01
-    - Ch29_nonPBR_Belly_Dance_phrase_02
     - Ch29_nonPBR_Belly_Dance_phrase_03
     - Ch29_nonPBR_Belly_Dance_phrase_04
     - Ch29_nonPBR_Belly_Dance_phrase_05
-    - Ch29_nonPBR_Belly_Dance_phrase_06
     - Ch29_nonPBR_Belly_Dance_phrase_07
-    - Ch29_nonPBR_Belly_Dance_phrase_08
     - Ch29_nonPBR_Belly_Dance_phrase_09
     - Ch29_nonPBR_Belly_Dance_phrase_10
-    Weight: 5
-    PreferredStroke: Any
-  - Name: Ch29 bellydancing phrases
-    States:
     - Ch29_nonPBR_Bellydancing_phrase_01
-    - Ch29_nonPBR_Bellydancing_phrase_02
     - Ch29_nonPBR_Bellydancing_phrase_03
     - Ch29_nonPBR_Bellydancing_phrase_04
-    - Ch29_nonPBR_Bellydancing_phrase_05
     - Ch29_nonPBR_Bellydancing_phrase_06
-    - Ch29_nonPBR_Bellydancing_phrase_07
-    - Ch29_nonPBR_Bellydancing_phrase_08
-    - Ch29_nonPBR_Bellydancing_phrase_09
-    - Ch29_nonPBR_Bellydancing_phrase_10
     - Ch29_nonPBR_Bellydancing_phrase_11
     - Ch29_nonPBR_Bellydancing_phrase_12
     - Ch29_nonPBR_Bellydancing_phrase_13
-    Weight: 4
+    - Ch29_nonPBR_Belly_Dance_1_phrase_01
+    - Ch29_nonPBR_Belly_Dance_1_phrase_02
+    - Ch29_nonPBR_Belly_Dance_1_phrase_03
+    - Ch29_nonPBR_Belly_Dance_1_phrase_04
+    - Ch29_nonPBR_Belly_Dance_1_phrase_05
+    Weight: 3
+    PreferredStroke: Any
+  - Name: Ch29 grounded hip drops
+    States:
+    - Ch29_nonPBR_Belly_Dance_phrase_02
+    - Ch29_nonPBR_Bellydancing_phrase_02
+    - Ch29_nonPBR_Bellydancing_phrase_05
+    - Ch29_nonPBR_Bellydancing_phrase_10
+    Weight: 5
     PreferredStroke: Doum
-  - Name: Ch29 dancing accents
+  - Name: Ch29 sharp tek accents
     States:
     - Ch29_nonPBR_Dancing_phrase_01
     - Ch29_nonPBR_Dancing_phrase_02
@@ -1999,33 +2057,36 @@ MonoBehaviour:
     - Ch29_nonPBR_Dancing_phrase_04
     - Ch29_nonPBR_Dancing_phrase_05
     - Ch29_nonPBR_Dancing_phrase_06
+    Weight: 4
+    PreferredStroke: Tek
+  - Name: Ch29 fast shimmy and roll phrases
+    States:
+    - Ch29_nonPBR_Belly_Dance_phrase_06
+    - Ch29_nonPBR_Belly_Dance_phrase_08
+    - Ch29_nonPBR_Bellydancing_phrase_07
+    - Ch29_nonPBR_Bellydancing_phrase_08
+    - Ch29_nonPBR_Bellydancing_phrase_09
     - Ch29_nonPBR_Dancing_phrase_07
     - Ch29_nonPBR_Dancing_phrase_08
     - Ch29_nonPBR_Dancing_phrase_09
     - Ch29_nonPBR_Dancing_phrase_10
     - Ch29_nonPBR_Dancing_phrase_11
-    Weight: 2
-    PreferredStroke: Tek
-  - Name: Ch29 ornaments
-    States:
-    - Ch29_nonPBR_Belly_Dance_1_phrase_01
-    - Ch29_nonPBR_Belly_Dance_1_phrase_02
-    - Ch29_nonPBR_Belly_Dance_1_phrase_03
-    - Ch29_nonPBR_Belly_Dance_1_phrase_04
-    - Ch29_nonPBR_Belly_Dance_1_phrase_05
     - Ch29_nonPBR_Belly_Dance_1_phrase_06
     - Ch29_nonPBR_Belly_Dance_1_phrase_07
     - Ch29_nonPBR_Belly_Dance_1_phrase_08
     - Ch29_nonPBR_Belly_Dance_1_phrase_09
     - Ch29_nonPBR_Belly_Dance_1_phrase_10
-    Weight: 1
+    Weight: 5
     PreferredStroke: Trillo
+  BaseAnimatorSpeed: 1.85
   PulseAnimatorSpeedOnHits: 1
-  BeatPulseReturnSpeed: 8
-  DoumSpeedPulse: 1.35
-  TekSpeedPulse: 1.18
-  KaSpeedPulse: 1.22
-  TrilloSpeedPulse: 1.45
+  BeatPulseReturnSpeed: 10
+  DoumSpeedPulse: 1.45
+  TekSpeedPulse: 1.28
+  KaSpeedPulse: 1.32
+  TrilloSpeedPulse: 1.6
+  LogIncomingOsc: 1
+  EnableKeyboardDebug: 1
   ToggleRecordingKey: 114
   TogglePlaybackKey: 112
   ClearRecordingKey: 99
@@ -2035,29 +2096,7 @@ MonoBehaviour:
   IgnoreLiveInputDuringPlayback: 1
   PlaybackStartDelay: 0.25
   RecordedPattern: []
-  DoumDanceStates:
-  - Scene 60
-  - Scene 61
-  - Scene 62
-  - Scene 63
-  - Scene 64
-  - Scene 65
-  - Scene 66
-  - Scene 67
-  - Scene 68
-  - Scene 69
-  - Scene 70
-  - Scene 71
-  - Scene 72
-  - Scene 73
-  - Scene 74
-  - Scene 75
-  - Scene 78
-  - Scene 79
-  - Scene 80
-  - Scene 81
-  - Scene 82
-  - Scene 83
+  DoumDanceStates: []
   TekDanceStates: []
   KaDanceStates: []
   TrilloDanceStates: []
@@ -2193,6 +2232,92 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1655171949}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1001 &1684172115
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: -8679921383154817045, guid: 92f635a19421748ea9c4d2886d251f60, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 92f635a19421748ea9c4d2886d251f60, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 92f635a19421748ea9c4d2886d251f60, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 92f635a19421748ea9c4d2886d251f60, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 92f635a19421748ea9c4d2886d251f60, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.05
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 92f635a19421748ea9c4d2886d251f60, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -0.3
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 92f635a19421748ea9c4d2886d251f60, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: -0.00000004371139
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 92f635a19421748ea9c4d2886d251f60, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 92f635a19421748ea9c4d2886d251f60, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 92f635a19421748ea9c4d2886d251f60, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 92f635a19421748ea9c4d2886d251f60, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 92f635a19421748ea9c4d2886d251f60, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 92f635a19421748ea9c4d2886d251f60, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 92f635a19421748ea9c4d2886d251f60, type: 3}
+      propertyPath: m_Name
+      value: Ch14_nonPBR
+      objectReference: {fileID: 0}
+    - target: {fileID: 4315648579854482848, guid: 92f635a19421748ea9c4d2886d251f60, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 2721c16be6f9548848495f6597a712e7, type: 2}
+    - target: {fileID: 5866666021909216657, guid: 92f635a19421748ea9c4d2886d251f60, type: 3}
+      propertyPath: m_Controller
+      value: 
+      objectReference: {fileID: 9100000, guid: 7e1dc4975936142ada2972c2e075562a, type: 2}
+    - target: {fileID: 5866666021909216657, guid: 92f635a19421748ea9c4d2886d251f60, type: 3}
+      propertyPath: m_ApplyRootMotion
+      value: 1
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 92f635a19421748ea9c4d2886d251f60, type: 3}
+--- !u!95 &1684172116 stripped
+Animator:
+  m_CorrespondingSourceObject: {fileID: 5866666021909216657, guid: 92f635a19421748ea9c4d2886d251f60, type: 3}
+  m_PrefabInstance: {fileID: 1684172115}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &2117127203
 GameObject:
   m_ObjectHideFlags: 0
@@ -2413,3 +2538,5 @@ SceneRoots:
   - {fileID: 1305422534}
   - {fileID: 19027279}
   - {fileID: 395565668}
+  - {fileID: 536938013}
+  - {fileID: 1684172115}

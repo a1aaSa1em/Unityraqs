@@ -26,3 +26,7 @@ UserSettings/
 # Windows
 Thumbs.db
 desktop.ini
+
+# Project outputs (kept local, not in repo)
+Recordings/
+Booklet_Submission/

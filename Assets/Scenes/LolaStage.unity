@@ -410,29 +410,7 @@ MonoBehaviour:
   LolaAnimator: {fileID: 926003902}
   IdleStateName: Idle
   Port: 7000
-  DoumDanceStates:
-  - Scene 60
-  - Scene 61
-  - Scene 62
-  - Scene 63
-  - Scene 64
-  - Scene 65
-  - Scene 66
-  - Scene 67
-  - Scene 68
-  - Scene 69
-  - Scene 70
-  - Scene 71
-  - Scene 72
-  - Scene 73
-  - Scene 74
-  - Scene 75
-  - Scene 78
-  - Scene 79
-  - Scene 80
-  - Scene 81
-  - Scene 82
-  - Scene 83
+  DoumDanceStates: []
   TekDanceStates: []
   KaDanceStates: []
   TrilloDanceStates: []
