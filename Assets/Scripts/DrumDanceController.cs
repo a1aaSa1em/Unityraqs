@@ -44,6 +44,19 @@ public class DrumDanceController : MonoBehaviour
     }
 
     [Serializable]
+    public class CharacterOption
+    {
+        [Tooltip("Label used by the on-screen switch button.")]
+        public string Name = "Character";
+
+        [Tooltip("Root GameObject to show/hide when switching.")]
+        public GameObject Root;
+
+        [Tooltip("Animator that receives the drum-driven dance states.")]
+        public Animator Animator;
+    }
+
+    [Serializable]
     public class StrokeCountPhrase
     {
         [Tooltip("Inspector label only.")]
@@ -76,14 +89,73 @@ public class DrumDanceController : MonoBehaviour
         }
     }
 
+    private struct StrokeComposition
+    {
+        public int Doum;
+        public int Tek;
+        public int Ka;
+        public int Trillo;
+
+        public int Total => Doum + Tek + Ka + Trillo;
+        public int DoumTekTotal => Doum + Tek;
+    }
+
+    private class RuntimeCharacterSlot
+    {
+        public string Name;
+        public GameObject Root;
+        public Animator Animator;
+    }
+
     [Header("References")]
     public Animator LolaAnimator;
+
+    [Tooltip("Controller assigned to every switchable character. Leave empty to reuse the current target animator's controller.")]
+    public RuntimeAnimatorController SharedAnimatorController;
 
     [Tooltip("Must exactly match the idle state name in the Animator.")]
     public string IdleStateName = "Idle";
 
+    [Header("Character Switching")]
+    [Tooltip("Characters that can receive the same drum-driven dance moves.")]
+    public List<CharacterOption> Characters = new List<CharacterOption>();
+
+    [Tooltip("When enabled, auto-finds scene characters by name, including disabled Lola.")]
+    public bool AutoFindSceneCharacters = true;
+
+    [Tooltip("Scene object names to auto-find for the character switch buttons.")]
+    public List<string> AutoFindCharacterNames = new List<string>
+    {
+        "Ch14_nonPBR",
+        "Lola Bunny",
+        "Lola Bunny (disabled)",
+        "Elmo Rigged"
+    };
+
+    [Tooltip("Only the selected character stays visible.")]
+    public bool HideInactiveCharacters = true;
+
+    [Tooltip("Draws small character switch buttons in the Game view during Play Mode.")]
+    public bool ShowCharacterSwitchButtons = true;
+
+    [Tooltip("Keyboard shortcut for cycling to the next character.")]
+    public KeyCode NextCharacterKey = KeyCode.Tab;
+
+    [Tooltip("Allow number keys 1-9 to switch directly to a character.")]
+    public bool EnableNumberKeyCharacterSwitching = true;
+
     [Header("OSC")]
     public int Port = 7000;
+
+    [Header("Live Input Noise Filter")]
+    [Tooltip("Ignores likely duplicate/noise OSC hits before they enter the phrase buffer.")]
+    public bool FilterLikelyNoiseHits = true;
+
+    [Tooltip("Fastest accepted spacing between any two live OSC hits from Max.")]
+    public float MinimumSecondsBetweenLiveHits = 0.06f;
+
+    [Tooltip("Fastest accepted spacing between repeated live hits of the same type.")]
+    public float MinimumSecondsBetweenSameLiveHit = 0.10f;
 
     [Header("Dance Mode")]
     [Tooltip("BufferedPhrases waits briefly, reads the rhythm shape, then plays a coherent 2-4 second movement.")]
@@ -106,10 +178,27 @@ public class DrumDanceController : MonoBehaviour
     public float PhrasePlaySeconds = 2.5f;
 
     [Tooltip("Blend time when moving between full dance phrases.")]
-    public float PhraseCrossfade = 0.28f;
+    public float PhraseCrossfade = 0.45f;
 
     [Tooltip("Keep the last phrase moving while the next buffer is being collected.")]
     public bool HoldPhraseUntilNextPhrase = true;
+
+    [Header("Idle Recovery")]
+    [Tooltip("When the drum stops, smoothly return to the configured idle state even if HoldPhraseUntilNextPhrase is enabled.")]
+    public bool ReturnToIdleWhenSilent = true;
+
+    [Tooltip("How much silence after the last accepted drum hit before returning to idle.")]
+    public float SecondsOfSilenceBeforeIdle = 1.0f;
+
+    [Tooltip("Minimum time to let a newly-started move breathe before silence can pull it back to idle.")]
+    public float MinimumDanceSecondsBeforeIdle = 0.45f;
+
+    [Header("Smooth Transitions")]
+    [Tooltip("Shortest blend used when changing from one dance move to another.")]
+    public float MinimumMoveCrossfade = 0.35f;
+
+    [Tooltip("Shortest blend used when returning to idle.")]
+    public float MinimumIdleCrossfade = 0.6f;
 
     [Header("Rhythm Pattern Mode")]
     [Tooltip("Hits closer than this are treated as part of a burst or roll.")]
@@ -152,6 +241,37 @@ public class DrumDanceController : MonoBehaviour
 
     [Tooltip("If StrokeCountPhrases is empty at runtime, automatically add the Ch29 stroke-count showcase presets.")]
     public bool AutoFillCountShowcaseIfEmpty = true;
+
+    [Header("Showcase Rules")]
+    [Tooltip("Every this many doum hits, play the dedicated doum accent state.")]
+    [Min(1)]
+    public int DoumPairMoveEvery = 2;
+
+    [Tooltip("Animator state used once for each doum pair.")]
+    public string DoumPairState = "Ch29_nonPBR_Dancing_phrase_01";
+
+    [Tooltip("Fast-hit showcase states. Consecutive pairs or triplets are chosen from this list.")]
+    public List<string> FastConsecutiveStates = new List<string>
+    {
+        "Ch29_nonPBR_Dancing_phrase_05",
+        "Ch29_nonPBR_Dancing_phrase_06",
+        "Ch29_nonPBR_Dancing_phrase_07",
+        "Ch29_nonPBR_Dancing_phrase_08",
+        "Ch29_nonPBR_Dancing_phrase_09",
+        "Ch29_nonPBR_Dancing_phrase_10"
+    };
+
+    [Tooltip("Minimum fast hits before playing a consecutive fast-hit pair.")]
+    public int FastConsecutiveMinimumHits = 5;
+
+    [Tooltip("At this many fast hits, play three consecutive clips instead of two.")]
+    public int FastConsecutiveLongMinimumHits = 9;
+
+    [Tooltip("Time between each consecutive fast-hit clip.")]
+    public float FastConsecutivePhraseSeconds = 0.52f;
+
+    [Tooltip("Blend time between consecutive fast-hit clips.")]
+    public float FastConsecutiveCrossfade = 0.16f;
 
     [Header("Curated Phrase Pools")]
     [Tooltip("Use these for grounded hip/belly material. Add only clips that look related.")]
@@ -220,10 +340,10 @@ public class DrumDanceController : MonoBehaviour
     public float ReactionSeconds = 0.65f;
 
     [Tooltip("Blend time when starting a reaction.")]
-    public float DanceCrossfade = 0.12f;
+    public float DanceCrossfade = 0.3f;
 
     [Tooltip("Blend time when returning to idle.")]
-    public float ReturnCrossfade = 0.35f;
+    public float ReturnCrossfade = 0.6f;
 
     [Tooltip("Prevents Lola from changing moves too rapidly.")]
     public float MinimumSecondsBetweenMoves = 0.25f;
@@ -236,12 +356,23 @@ public class DrumDanceController : MonoBehaviour
     private ConcurrentQueue<string> triggerQueue = new ConcurrentQueue<string>();
 
     private Dictionary<string, string> lastPlayedClip = new Dictionary<string, string>();
+    private Dictionary<string, double> lastAcceptedLiveHitByType = new Dictionary<string, double>();
     private List<StrokeHit> phraseHits = new List<StrokeHit>();
+    private List<RuntimeCharacterSlot> runtimeCharacters = new List<RuntimeCharacterSlot>();
+
+    private readonly System.Diagnostics.Stopwatch liveHitClock = System.Diagnostics.Stopwatch.StartNew();
+    private readonly object liveHitFilterLock = new object();
+
+    private RuntimeAnimatorController resolvedSharedAnimatorController;
+    private int activeCharacterIndex = -1;
+    private double lastAcceptedLiveHitTime = -999.0;
+    private int rejectedLiveHitCount = 0;
 
     private float returnToIdleTime = -1f;
     private float lastMoveTime = -999f;
     private float phraseStartTime = -1f;
     private float lastHitTime = -1f;
+    private float lastAcceptedStrokeTime = -999f;
     private float nextPhraseAllowedTime = -999f;
     private float targetAnimatorSpeed = 1f;
     private float recordingStartTime = -1f;
@@ -250,10 +381,14 @@ public class DrumDanceController : MonoBehaviour
     private string lastPhraseState = null;
     private string lastCountPhraseState = null;
     private bool isDancing = false;
+    private List<string> queuedShowcaseStates = new List<string>();
+    private int queuedShowcaseIndex = 0;
+    private float nextQueuedShowcaseTime = -1f;
 
     void Start()
     {
         targetAnimatorSpeed = BaseAnimatorSpeed;
+        InitializeCharacterSwitcher();
 
         if (AutoFillCountShowcaseIfEmpty && UseStrokeCountPhrases && (StrokeCountPhrases == null || StrokeCountPhrases.Count == 0))
         {
@@ -405,11 +540,21 @@ public class DrumDanceController : MonoBehaviour
     {
         StrokeCountPhrases.Clear();
 
-        AddCountPhrase("4-hit neutral setup", 4, "Any", 3,
+        AddCountPhrase("4-hit balanced setup", 4, "DoumTek", 4,
             "Ch29_nonPBR_Belly_Dance_phrase_01",
             "Ch29_nonPBR_Belly_Dance_phrase_03",
             "Ch29_nonPBR_Bellydancing_phrase_01",
             "Ch29_nonPBR_Bellydancing_phrase_04");
+
+        AddCountPhrase("4-hit doum weight shift", 4, "Doum", 5,
+            "Ch29_nonPBR_Belly_Dance_phrase_02",
+            "Ch29_nonPBR_Bellydancing_phrase_02",
+            "Ch29_nonPBR_Bellydancing_phrase_05");
+
+        AddCountPhrase("4-hit tek accent setup", 4, "Tek", 5,
+            "Ch29_nonPBR_Dancing_phrase_01",
+            "Ch29_nonPBR_Dancing_phrase_02",
+            "Ch29_nonPBR_Dancing_phrase_03");
 
         AddCountPhrase("8-hit neutral flow", 8, "Any", 3,
             "Ch29_nonPBR_Belly_Dance_phrase_04",
@@ -419,6 +564,14 @@ public class DrumDanceController : MonoBehaviour
             "Ch29_nonPBR_Bellydancing_phrase_06",
             "Ch29_nonPBR_Belly_Dance_1_phrase_01",
             "Ch29_nonPBR_Belly_Dance_1_phrase_02",
+            "Ch29_nonPBR_Belly_Dance_1_phrase_03");
+
+        AddCountPhrase("8-hit doum tek combo", 8, "DoumTek", 6,
+            "Ch29_nonPBR_Belly_Dance_phrase_04",
+            "Ch29_nonPBR_Belly_Dance_phrase_07",
+            "Ch29_nonPBR_Bellydancing_phrase_03",
+            "Ch29_nonPBR_Bellydancing_phrase_06",
+            "Ch29_nonPBR_Belly_Dance_1_phrase_01",
             "Ch29_nonPBR_Belly_Dance_1_phrase_03");
 
         AddCountPhrase("8-hit doum drops", 8, "Doum", 4,
@@ -457,7 +610,20 @@ public class DrumDanceController : MonoBehaviour
             "Ch29_nonPBR_Dancing_phrase_09",
             "Ch29_nonPBR_Belly_Dance_1_phrase_06");
 
+        AddCountPhrase("12-hit doum tek travel", 12, "DoumTek", 5,
+            "Ch29_nonPBR_Dancing_phrase_07",
+            "Ch29_nonPBR_Dancing_phrase_09",
+            "Ch29_nonPBR_Belly_Dance_1_phrase_06",
+            "Ch29_nonPBR_Belly_Dance_1_phrase_07");
+
         AddCountPhrase("16-hit finale", 16, "Any", 2,
+            "Ch29_nonPBR_Dancing_phrase_10",
+            "Ch29_nonPBR_Dancing_phrase_11",
+            "Ch29_nonPBR_Belly_Dance_1_phrase_08",
+            "Ch29_nonPBR_Belly_Dance_1_phrase_09",
+            "Ch29_nonPBR_Belly_Dance_1_phrase_10");
+
+        AddCountPhrase("16-hit balanced finale", 16, "DoumTek", 5,
             "Ch29_nonPBR_Dancing_phrase_10",
             "Ch29_nonPBR_Dancing_phrase_11",
             "Ch29_nonPBR_Belly_Dance_1_phrase_08",
@@ -530,11 +696,310 @@ public class DrumDanceController : MonoBehaviour
                stateName.Contains("_phrase_");
     }
 
+    private void InitializeCharacterSwitcher()
+    {
+        resolvedSharedAnimatorController = SharedAnimatorController != null
+            ? SharedAnimatorController
+            : LolaAnimator != null ? LolaAnimator.runtimeAnimatorController : null;
+
+        RefreshRuntimeCharacters();
+
+        int initialIndex = FindCharacterIndexForAnimator(LolaAnimator);
+
+        if (initialIndex < 0)
+        {
+            initialIndex = FindActiveCharacterIndex();
+        }
+
+        if (initialIndex < 0 && runtimeCharacters.Count > 0)
+        {
+            initialIndex = 0;
+        }
+
+        if (initialIndex >= 0)
+        {
+            SelectCharacter(initialIndex, false);
+        }
+    }
+
+    private void RefreshRuntimeCharacters()
+    {
+        runtimeCharacters.Clear();
+
+        foreach (CharacterOption option in Characters)
+        {
+            if (option == null)
+            {
+                continue;
+            }
+
+            Animator animator = option.Animator != null ? option.Animator : option.Root != null ? option.Root.GetComponentInChildren<Animator>(true) : null;
+            GameObject root = option.Root != null ? option.Root : animator != null ? animator.gameObject : null;
+
+            AddRuntimeCharacter(option.Name, root, animator);
+        }
+
+        if (AutoFindSceneCharacters)
+        {
+            foreach (string characterName in AutoFindCharacterNames)
+            {
+                GameObject root = FindSceneGameObjectByName(characterName);
+                Animator animator = root != null ? root.GetComponentInChildren<Animator>(true) : null;
+                AddRuntimeCharacter(characterName, root, animator);
+            }
+        }
+
+        if (LolaAnimator != null)
+        {
+            AddRuntimeCharacter(CleanCharacterName(LolaAnimator.gameObject.name), LolaAnimator.gameObject, LolaAnimator);
+        }
+    }
+
+    private void AddRuntimeCharacter(string displayName, GameObject root, Animator animator)
+    {
+        if (root == null && animator == null)
+        {
+            return;
+        }
+
+        if (animator == null && root != null)
+        {
+            animator = root.GetComponentInChildren<Animator>(true);
+        }
+
+        if (animator == null)
+        {
+            return;
+        }
+
+        if (root == null)
+        {
+            root = animator.gameObject;
+        }
+
+        foreach (RuntimeCharacterSlot existing in runtimeCharacters)
+        {
+            if (existing.Animator == animator || existing.Root == root)
+            {
+                return;
+            }
+        }
+
+        EnsureAnimatorController(animator);
+
+        runtimeCharacters.Add(new RuntimeCharacterSlot
+        {
+            Name = string.IsNullOrWhiteSpace(displayName) ? CleanCharacterName(root.name) : CleanCharacterName(displayName),
+            Root = root,
+            Animator = animator
+        });
+    }
+
+    private void EnsureAnimatorController(Animator animator)
+    {
+        if (animator == null)
+        {
+            return;
+        }
+
+        if (animator.runtimeAnimatorController == null && resolvedSharedAnimatorController != null)
+        {
+            animator.runtimeAnimatorController = resolvedSharedAnimatorController;
+        }
+
+        if (resolvedSharedAnimatorController == null && animator.runtimeAnimatorController != null)
+        {
+            resolvedSharedAnimatorController = animator.runtimeAnimatorController;
+        }
+    }
+
+    private GameObject FindSceneGameObjectByName(string targetName)
+    {
+        if (string.IsNullOrWhiteSpace(targetName))
+        {
+            return null;
+        }
+
+        string cleanTarget = CleanCharacterName(targetName);
+        GameObject bestMatch = null;
+
+        foreach (GameObject candidate in Resources.FindObjectsOfTypeAll<GameObject>())
+        {
+            if (candidate == null || !candidate.scene.IsValid())
+            {
+                continue;
+            }
+
+            string cleanCandidate = CleanCharacterName(candidate.name);
+
+            if (string.Equals(cleanCandidate, cleanTarget, StringComparison.OrdinalIgnoreCase))
+            {
+                if (candidate.GetComponentInChildren<Animator>(true) != null)
+                {
+                    return candidate;
+                }
+
+                bestMatch = bestMatch != null ? bestMatch : candidate;
+            }
+        }
+
+        return bestMatch;
+    }
+
+    private string CleanCharacterName(string name)
+    {
+        return string.IsNullOrEmpty(name)
+            ? "Character"
+            : name.Replace(" (disabled)", string.Empty).Trim();
+    }
+
+    private int FindCharacterIndexForAnimator(Animator animator)
+    {
+        if (animator == null)
+        {
+            return -1;
+        }
+
+        for (int i = 0; i < runtimeCharacters.Count; i++)
+        {
+            if (runtimeCharacters[i].Animator == animator)
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    private int FindActiveCharacterIndex()
+    {
+        for (int i = 0; i < runtimeCharacters.Count; i++)
+        {
+            if (runtimeCharacters[i].Root != null && runtimeCharacters[i].Root.activeInHierarchy)
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    private void HandleCharacterSwitchInput()
+    {
+        if (runtimeCharacters.Count <= 1)
+        {
+            return;
+        }
+
+        if (NextCharacterKey != KeyCode.None && Input.GetKeyDown(NextCharacterKey))
+        {
+            SelectCharacter((activeCharacterIndex + 1 + runtimeCharacters.Count) % runtimeCharacters.Count, true);
+        }
+
+        if (!EnableNumberKeyCharacterSwitching)
+        {
+            return;
+        }
+
+        int keyCount = Mathf.Min(9, runtimeCharacters.Count);
+
+        for (int i = 0; i < keyCount; i++)
+        {
+            if (Input.GetKeyDown((KeyCode)((int)KeyCode.Alpha1 + i)))
+            {
+                SelectCharacter(i, true);
+                return;
+            }
+        }
+    }
+
+    private void SelectCharacter(int index, bool blendToIdle)
+    {
+        if (index < 0 || index >= runtimeCharacters.Count)
+        {
+            return;
+        }
+
+        RuntimeCharacterSlot slot = runtimeCharacters[index];
+
+        if (slot == null || slot.Animator == null)
+        {
+            return;
+        }
+
+        if (HideInactiveCharacters)
+        {
+            for (int i = 0; i < runtimeCharacters.Count; i++)
+            {
+                RuntimeCharacterSlot other = runtimeCharacters[i];
+
+                if (other?.Root != null)
+                {
+                    other.Root.SetActive(i == index);
+                }
+            }
+        }
+        else if (slot.Root != null)
+        {
+            slot.Root.SetActive(true);
+        }
+
+        LolaAnimator = slot.Animator;
+        EnsureAnimatorController(LolaAnimator);
+        LolaAnimator.speed = BaseAnimatorSpeed;
+        targetAnimatorSpeed = BaseAnimatorSpeed;
+        activeCharacterIndex = index;
+        isDancing = false;
+        returnToIdleTime = -1f;
+        ClearPhraseBuffer();
+
+        if (blendToIdle)
+        {
+            CrossFadeState(IdleStateName, ReturnCrossfade);
+        }
+        else if (HasAnimatorState(IdleStateName))
+        {
+            LolaAnimator.Play(IdleStateName, 0, 0f);
+        }
+
+        Debug.Log("Active drum character: " + slot.Name);
+    }
+
+    private void OnGUI()
+    {
+        if (!ShowCharacterSwitchButtons || runtimeCharacters.Count <= 1)
+        {
+            return;
+        }
+
+        const float left = 16f;
+        const float top = 16f;
+        const float width = 190f;
+        const float rowHeight = 30f;
+        float height = 34f + runtimeCharacters.Count * rowHeight;
+
+        GUI.Box(new Rect(left, top, width, height), "Character");
+
+        for (int i = 0; i < runtimeCharacters.Count; i++)
+        {
+            RuntimeCharacterSlot slot = runtimeCharacters[i];
+            string prefix = i == activeCharacterIndex ? "* " : $"{i + 1}. ";
+            Rect buttonRect = new Rect(left + 10f, top + 26f + i * rowHeight, width - 20f, 24f);
+
+            if (GUI.Button(buttonRect, prefix + slot.Name))
+            {
+                SelectCharacter(i, true);
+            }
+        }
+    }
+
     void Update()
     {
+        HandleCharacterSwitchInput();
         HandleRecordingShortcuts();
         HandleKeyboardDebug();
         ReplayRecordedPattern();
+        UpdateQueuedShowcaseStates();
 
         while (triggerQueue.TryDequeue(out string strokeType))
         {
@@ -553,10 +1018,7 @@ public class DrumDanceController : MonoBehaviour
 
         UpdateBeatPulse();
 
-        if ((Mode == DanceMode.ImmediateReactions || !HoldPhraseUntilNextPhrase) && isDancing && returnToIdleTime > 0f && Time.time >= returnToIdleTime)
-        {
-            ReturnToIdle();
-        }
+        UpdateIdleRecovery();
     }
 
     private void HandleKeyboardDebug()
@@ -593,6 +1055,8 @@ public class DrumDanceController : MonoBehaviour
 
     private void ProcessStroke(string strokeType, bool canRecord)
     {
+        lastAcceptedStrokeTime = Time.time;
+
         if (canRecord && RecordLiveInput)
         {
             RecordStroke(strokeType);
@@ -668,6 +1132,31 @@ public class DrumDanceController : MonoBehaviour
 
         isDancing = false;
         returnToIdleTime = -1f;
+        targetAnimatorSpeed = BaseAnimatorSpeed;
+        ClearPhraseBuffer();
+    }
+
+    private void UpdateIdleRecovery()
+    {
+        if (!isDancing)
+        {
+            return;
+        }
+
+        float now = Time.time;
+        bool legacyIdleExpired = (Mode == DanceMode.ImmediateReactions || !HoldPhraseUntilNextPhrase) &&
+                                 returnToIdleTime > 0f &&
+                                 now >= returnToIdleTime;
+
+        bool silenceIdleExpired = ReturnToIdleWhenSilent &&
+                                  lastAcceptedStrokeTime > 0f &&
+                                  now - lastAcceptedStrokeTime >= Mathf.Max(0f, SecondsOfSilenceBeforeIdle) &&
+                                  now - lastMoveTime >= Mathf.Max(0f, MinimumDanceSecondsBeforeIdle);
+
+        if (legacyIdleExpired || silenceIdleExpired)
+        {
+            ReturnToIdle();
+        }
     }
 
     [ContextMenu("Recording/Start Recording")]
@@ -824,6 +1313,7 @@ public class DrumDanceController : MonoBehaviour
         phraseHits.Clear();
         phraseStartTime = -1f;
         lastHitTime = -1f;
+        ClearQueuedShowcaseStates();
     }
 
     private List<string> GetPoolForStroke(string strokeType)
@@ -910,12 +1400,29 @@ public class DrumDanceController : MonoBehaviour
 
     private void PlayBufferedPhrase()
     {
-        string phraseCue = Mode == DanceMode.RhythmPatterns ? GetRhythmPatternCue() : GetDominantStroke();
+        StrokeComposition composition = GetStrokeComposition();
+        string phraseCue = Mode == DanceMode.RhythmPatterns ? GetRhythmPatternCue() : GetShowcaseCue(composition);
         int rawHitCount = phraseHits.Count;
         int hitCount = GetCountPhraseSelectionCount(rawHitCount);
         string dominantStroke = GetDominantStroke();
-        string chosenState = PickCountPhraseState(hitCount, dominantStroke);
+        List<string> fastSequence = PickFastConsecutiveSequence(composition);
+        string chosenState = null;
         string phraseSource = "count";
+
+        if (IsDoumPairShowcase(composition))
+        {
+            chosenState = DoumPairState;
+            phraseSource = "doum-pair";
+        }
+        else if (fastSequence.Count > 0)
+        {
+            PlayShowcaseSequence(fastSequence, rawHitCount, phraseCue, dominantStroke, composition);
+            return;
+        }
+        else
+        {
+            chosenState = PickCountPhraseState(hitCount, phraseCue, dominantStroke);
+        }
 
         if (string.IsNullOrEmpty(chosenState))
         {
@@ -930,7 +1437,7 @@ public class DrumDanceController : MonoBehaviour
             return;
         }
 
-        Debug.Log($"Phrase [{phraseSource}: {rawHitCount} hits, selected count {hitCount}, cue {phraseCue}, dominant {dominantStroke}] -> {chosenState}");
+        Debug.Log($"Phrase [{phraseSource}: {rawHitCount} hits, selected count {hitCount}, cue {phraseCue}, dominant {dominantStroke}, doum {composition.Doum}, tek {composition.Tek}] -> {chosenState}");
 
         if (!CrossFadeState(chosenState, PhraseCrossfade))
         {
@@ -951,7 +1458,24 @@ public class DrumDanceController : MonoBehaviour
 
     private bool IsCountPhraseReady()
     {
-        if (!UseStrokeCountPhrases || !PlayCountPhraseAsSoonAsReady || StrokeCountPhrases == null || StrokeCountPhrases.Count == 0)
+        if (!UseStrokeCountPhrases || !PlayCountPhraseAsSoonAsReady)
+        {
+            return false;
+        }
+
+        StrokeComposition composition = GetStrokeComposition();
+
+        if (IsDoumPairShowcase(composition))
+        {
+            return true;
+        }
+
+        if (IsFastConsecutiveCandidate(composition))
+        {
+            return false;
+        }
+
+        if (StrokeCountPhrases == null || StrokeCountPhrases.Count == 0)
         {
             return false;
         }
@@ -1034,49 +1558,224 @@ public class DrumDanceController : MonoBehaviour
             return "Trillo";
         }
 
-        int doum = 0;
-        int tek = 0;
-        int ka = 0;
-        int trillo = 0;
+        StrokeComposition composition = GetStrokeComposition();
+
+        if (composition.Tek >= composition.Doum && composition.Tek >= composition.Ka && composition.Tek >= composition.Trillo)
+        {
+            return "Tek";
+        }
+
+        if (composition.Ka >= composition.Doum && composition.Ka >= composition.Tek && composition.Ka >= composition.Trillo)
+        {
+            return "Ka";
+        }
+
+        if (composition.Trillo >= composition.Doum && composition.Trillo >= composition.Tek && composition.Trillo >= composition.Ka)
+        {
+            return "Trillo";
+        }
+
+        return "Doum";
+    }
+
+    private StrokeComposition GetStrokeComposition()
+    {
+        StrokeComposition composition = new StrokeComposition();
 
         foreach (StrokeHit hit in phraseHits)
         {
             switch (hit.Type)
             {
                 case "Doum":
-                    doum++;
+                    composition.Doum++;
                     break;
 
                 case "Tek":
-                    tek++;
+                    composition.Tek++;
                     break;
 
                 case "Ka":
-                    ka++;
+                    composition.Ka++;
                     break;
 
                 case "Trillo":
-                    trillo++;
+                    composition.Trillo++;
                     break;
             }
         }
 
-        if (tek >= doum && tek >= ka && tek >= trillo)
-        {
-            return "Tek";
-        }
+        return composition;
+    }
 
-        if (ka >= doum && ka >= tek && ka >= trillo)
-        {
-            return "Ka";
-        }
-
-        if (trillo >= doum && trillo >= tek && trillo >= ka)
+    private string GetShowcaseCue(StrokeComposition composition)
+    {
+        if (InferTrilloFromFastHits && IsTrilloLikePattern())
         {
             return "Trillo";
         }
 
-        return "Doum";
+        if (composition.Trillo > 0 && composition.Trillo >= composition.Doum && composition.Trillo >= composition.Tek)
+        {
+            return "Trillo";
+        }
+
+        if (composition.DoumTekTotal >= 4)
+        {
+            float doumShare = composition.Doum / (float)composition.DoumTekTotal;
+            float tekShare = composition.Tek / (float)composition.DoumTekTotal;
+
+            if (doumShare >= 0.65f)
+            {
+                return "Doum";
+            }
+
+            if (tekShare >= 0.65f)
+            {
+                return "Tek";
+            }
+
+            return "DoumTek";
+        }
+
+        return GetDominantStroke();
+    }
+
+    private bool IsDoumPairShowcase(StrokeComposition composition)
+    {
+        return DoumPairMoveEvery > 0 &&
+               composition.Doum >= DoumPairMoveEvery &&
+               composition.Doum % DoumPairMoveEvery == 0 &&
+               composition.Tek == 0 &&
+               composition.Ka == 0 &&
+               composition.Trillo == 0 &&
+               GetFastGapCount() == 0 &&
+               HasAnimatorState(DoumPairState);
+    }
+
+    private bool IsFastConsecutiveCandidate(StrokeComposition composition)
+    {
+        if (composition.Total < FastConsecutiveMinimumHits || FastConsecutiveStates == null || FastConsecutiveStates.Count < 2)
+        {
+            return false;
+        }
+
+        return IsTrilloLikePattern() || GetFastGapCount() >= Mathf.Max(1, FastConsecutiveMinimumHits - 2);
+    }
+
+    private List<string> PickFastConsecutiveSequence(StrokeComposition composition)
+    {
+        List<string> sequence = new List<string>();
+
+        if (!IsFastConsecutiveCandidate(composition))
+        {
+            return sequence;
+        }
+
+        List<string> existingStates = new List<string>();
+
+        foreach (string stateName in FastConsecutiveStates)
+        {
+            if (HasAnimatorState(stateName))
+            {
+                existingStates.Add(stateName);
+            }
+        }
+
+        int sequenceLength = composition.Total >= FastConsecutiveLongMinimumHits ? 3 : 2;
+
+        if (existingStates.Count < sequenceLength)
+        {
+            return sequence;
+        }
+
+        int maxStart = existingStates.Count - sequenceLength;
+        int startIndex = UnityEngine.Random.Range(0, maxStart + 1);
+
+        for (int i = 0; i < sequenceLength; i++)
+        {
+            sequence.Add(existingStates[startIndex + i]);
+        }
+
+        return sequence;
+    }
+
+    private int GetFastGapCount()
+    {
+        int fastGaps = 0;
+
+        for (int i = 1; i < phraseHits.Count; i++)
+        {
+            float gap = phraseHits[i].Time - phraseHits[i - 1].Time;
+
+            if (gap <= FastGapSeconds)
+            {
+                fastGaps++;
+            }
+        }
+
+        return fastGaps;
+    }
+
+    private void PlayShowcaseSequence(List<string> sequence, int rawHitCount, string phraseCue, string dominantStroke, StrokeComposition composition)
+    {
+        if (sequence == null || sequence.Count == 0)
+        {
+            return;
+        }
+
+        Debug.Log($"Phrase [fast-run: {rawHitCount} hits, cue {phraseCue}, dominant {dominantStroke}, doum {composition.Doum}, tek {composition.Tek}] -> {string.Join(" -> ", sequence)}");
+
+        if (!CrossFadeState(sequence[0], FastConsecutiveCrossfade))
+        {
+            phraseHits.Clear();
+            return;
+        }
+
+        lastPhraseState = sequence[0];
+        lastMoveTime = Time.time;
+        returnToIdleTime = Time.time + FastConsecutivePhraseSeconds * sequence.Count;
+        nextPhraseAllowedTime = returnToIdleTime;
+        isDancing = true;
+
+        queuedShowcaseStates.Clear();
+
+        for (int i = 1; i < sequence.Count; i++)
+        {
+            queuedShowcaseStates.Add(sequence[i]);
+        }
+
+        queuedShowcaseIndex = 0;
+        nextQueuedShowcaseTime = queuedShowcaseStates.Count > 0 ? Time.time + FastConsecutivePhraseSeconds : -1f;
+
+        phraseHits.Clear();
+        phraseStartTime = -1f;
+        lastHitTime = -1f;
+    }
+
+    private void UpdateQueuedShowcaseStates()
+    {
+        if (queuedShowcaseIndex >= queuedShowcaseStates.Count || nextQueuedShowcaseTime < 0f || Time.time < nextQueuedShowcaseTime)
+        {
+            return;
+        }
+
+        string nextState = queuedShowcaseStates[queuedShowcaseIndex];
+
+        if (CrossFadeState(nextState, FastConsecutiveCrossfade))
+        {
+            lastPhraseState = nextState;
+            lastMoveTime = Time.time;
+        }
+
+        queuedShowcaseIndex++;
+        nextQueuedShowcaseTime = queuedShowcaseIndex < queuedShowcaseStates.Count ? Time.time + FastConsecutivePhraseSeconds : -1f;
+    }
+
+    private void ClearQueuedShowcaseStates()
+    {
+        queuedShowcaseStates.Clear();
+        queuedShowcaseIndex = 0;
+        nextQueuedShowcaseTime = -1f;
     }
 
     private bool IsTrilloLikePattern()
@@ -1191,14 +1890,15 @@ public class DrumDanceController : MonoBehaviour
         return PickExistingStateFromList(fallbackPool, lastPhraseState);
     }
 
-    private string PickCountPhraseState(int hitCount, string dominantStroke)
+    private string PickCountPhraseState(int hitCount, string phraseCue, string dominantStroke)
     {
         if (!UseStrokeCountPhrases || StrokeCountPhrases == null || StrokeCountPhrases.Count == 0)
         {
             return null;
         }
 
-        List<StrokeCountPhrase> exactCandidates = new List<StrokeCountPhrase>();
+        List<StrokeCountPhrase> cueCandidates = new List<StrokeCountPhrase>();
+        List<StrokeCountPhrase> dominantCandidates = new List<StrokeCountPhrase>();
         List<StrokeCountPhrase> fallbackCandidates = new List<StrokeCountPhrase>();
 
         foreach (StrokeCountPhrase phrase in StrokeCountPhrases)
@@ -1208,11 +1908,15 @@ public class DrumDanceController : MonoBehaviour
                 continue;
             }
 
-            if (string.Equals(phrase.PreferredStroke, dominantStroke, StringComparison.OrdinalIgnoreCase) ||
-                (string.Equals(dominantStroke, "Trillo", StringComparison.OrdinalIgnoreCase) &&
+            if (string.Equals(phrase.PreferredStroke, phraseCue, StringComparison.OrdinalIgnoreCase) ||
+                (string.Equals(phraseCue, "Trillo", StringComparison.OrdinalIgnoreCase) &&
                  string.Equals(phrase.PreferredStroke, "Roll", StringComparison.OrdinalIgnoreCase)))
             {
-                exactCandidates.Add(phrase);
+                cueCandidates.Add(phrase);
+            }
+            else if (string.Equals(phrase.PreferredStroke, dominantStroke, StringComparison.OrdinalIgnoreCase))
+            {
+                dominantCandidates.Add(phrase);
             }
             else if (string.Equals(phrase.PreferredStroke, "Any", StringComparison.OrdinalIgnoreCase))
             {
@@ -1220,7 +1924,12 @@ public class DrumDanceController : MonoBehaviour
             }
         }
 
-        List<StrokeCountPhrase> candidates = exactCandidates.Count > 0 ? exactCandidates : fallbackCandidates;
+        List<StrokeCountPhrase> candidates = cueCandidates.Count > 0 ? cueCandidates : dominantCandidates;
+
+        if (candidates.Count == 0)
+        {
+            candidates = fallbackCandidates;
+        }
 
         if (candidates.Count == 0)
         {
@@ -1323,9 +2032,22 @@ public class DrumDanceController : MonoBehaviour
             return false;
         }
 
-        LolaAnimator.CrossFadeInFixedTime(stateName, crossfadeSeconds, 0, 0f);
-        Debug.Log("Animator crossfade started: " + stateName);
+        float resolvedCrossfadeSeconds = GetResolvedCrossfadeSeconds(stateName, crossfadeSeconds);
+        LolaAnimator.CrossFadeInFixedTime(stateName, resolvedCrossfadeSeconds, 0, 0f);
+        Debug.Log($"Animator crossfade started: {stateName} ({resolvedCrossfadeSeconds:0.00}s)");
         return true;
+    }
+
+    private float GetResolvedCrossfadeSeconds(string stateName, float requestedCrossfadeSeconds)
+    {
+        float requested = Mathf.Max(0f, requestedCrossfadeSeconds);
+
+        if (string.Equals(stateName, IdleStateName, StringComparison.Ordinal))
+        {
+            return Mathf.Max(requested, MinimumIdleCrossfade);
+        }
+
+        return Mathf.Max(requested, MinimumMoveCrossfade);
     }
 
     private string PickExistingStateFromList(List<string> states, string avoidState)
@@ -1445,26 +2167,83 @@ public class DrumDanceController : MonoBehaviour
 
     private void OnDoumReceived(OscMessageValues values)
     {
-        LogOscHit("Doum");
-        triggerQueue.Enqueue("Doum");
+        EnqueueLiveHit("Doum");
     }
 
     private void OnTekReceived(OscMessageValues values)
     {
-        LogOscHit("Tek");
-        triggerQueue.Enqueue("Tek");
+        EnqueueLiveHit("Tek");
     }
 
     private void OnKaReceived(OscMessageValues values)
     {
-        LogOscHit("Ka");
-        triggerQueue.Enqueue("Ka");
+        EnqueueLiveHit("Ka");
     }
 
     private void OnTrilloReceived(OscMessageValues values)
     {
-        LogOscHit("Trillo");
-        triggerQueue.Enqueue("Trillo");
+        EnqueueLiveHit("Trillo");
+    }
+
+    private void EnqueueLiveHit(string strokeType)
+    {
+        if (!TryAcceptLiveHit(strokeType))
+        {
+            return;
+        }
+
+        LogOscHit(strokeType);
+        triggerQueue.Enqueue(strokeType);
+    }
+
+    private bool TryAcceptLiveHit(string strokeType)
+    {
+        if (!FilterLikelyNoiseHits)
+        {
+            return true;
+        }
+
+        double now = liveHitClock.Elapsed.TotalSeconds;
+        float minimumAnyGap = Mathf.Max(0f, MinimumSecondsBetweenLiveHits);
+        float minimumSameGap = Mathf.Max(0f, MinimumSecondsBetweenSameLiveHit);
+
+        lock (liveHitFilterLock)
+        {
+            if (now - lastAcceptedLiveHitTime < minimumAnyGap)
+            {
+                LogRejectedLiveHit(strokeType, "too soon after previous hit");
+                return false;
+            }
+
+            if (lastAcceptedLiveHitByType.TryGetValue(strokeType, out double lastSameHitTime) && now - lastSameHitTime < minimumSameGap)
+            {
+                LogRejectedLiveHit(strokeType, "duplicate hit");
+                return false;
+            }
+
+            lastAcceptedLiveHitTime = now;
+            lastAcceptedLiveHitByType[strokeType] = now;
+            return true;
+        }
+    }
+
+    private void LogRejectedLiveHit(string strokeType, string reason)
+    {
+        rejectedLiveHitCount++;
+
+        if (!LogIncomingOsc)
+        {
+            return;
+        }
+
+        if (rejectedLiveHitCount <= 8)
+        {
+            Debug.Log($"OSC hit ignored by noise filter: {strokeType} ({reason})");
+        }
+        else if (rejectedLiveHitCount == 9)
+        {
+            Debug.Log("Further OSC noise-filter logs suppressed.");
+        }
     }
 
     private void LogOscHit(string strokeType)

@@ -2003,20 +2003,62 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DrumDanceController
   LolaAnimator: {fileID: 1684172116}
+  SharedAnimatorController: {fileID: 0}
   IdleStateName: Idle
+  Characters: []
+  AutoFindSceneCharacters: 1
+  AutoFindCharacterNames:
+  - Ch14_nonPBR
+  - Lola Bunny
+  - Lola Bunny (disabled)
+  - Elmo Rigged
+  HideInactiveCharacters: 1
+  ShowCharacterSwitchButtons: 1
+  NextCharacterKey: 9
+  EnableNumberKeyCharacterSwitching: 1
   Port: 7000
+  FilterLikelyNoiseHits: 1
+  MinimumSecondsBetweenLiveHits: 0.06
+  MinimumSecondsBetweenSameLiveHit: 0.1
   Mode: 1
-  PhraseBufferSeconds: 1.5
+  PhraseBufferSeconds: 1.25
   SilenceFlushSeconds: 0.55
   MinimumHitsForPhrase: 1
   PlayPhraseImmediatelyOnHit: 1
-  PhrasePlaySeconds: 1.05
-  PhraseCrossfade: 0.08
+  PhrasePlaySeconds: 1.4
+  PhraseCrossfade: 0.45
   HoldPhraseUntilNextPhrase: 1
+  ReturnToIdleWhenSilent: 1
+  SecondsOfSilenceBeforeIdle: 1
+  MinimumDanceSecondsBeforeIdle: 0.45
+  MinimumMoveCrossfade: 0.4
+  MinimumIdleCrossfade: 0.65
   FastGapSeconds: 0.22
   RollAverageGapSeconds: 0.18
   RollMinimumHits: 5
   BurstMinimumHits: 3
+  InferTrilloFromFastHits: 1
+  InferredTrilloAverageGapSeconds: 0.16
+  InferredTrilloMinimumFastGaps: 4
+  UseStrokeCountPhrases: 1
+  PlayCountPhraseAsSoonAsReady: 1
+  CountedPhraseHitTarget: 8
+  MaximumCountedPhraseHits: 16
+  StrokeCountPhrases: []
+  AutoFillCountShowcaseIfEmpty: 1
+  DoumPairMoveEvery: 2
+  DoumPairState: Ch29_nonPBR_Dancing_phrase_01
+  FastConsecutiveStates:
+  - Ch29_nonPBR_Dancing_phrase_05
+  - Ch29_nonPBR_Dancing_phrase_06
+  - Ch29_nonPBR_Dancing_phrase_07
+  - Ch29_nonPBR_Dancing_phrase_08
+  - Ch29_nonPBR_Dancing_phrase_09
+  - Ch29_nonPBR_Dancing_phrase_10
+  FastConsecutiveMinimumHits: 5
+  FastConsecutiveLongMinimumHits: 9
+  FastConsecutivePhraseSeconds: 0.52
+  FastConsecutiveCrossfade: 0.16
   PhrasePools:
   - Name: Ch29 neutral flow
     States:
@@ -2078,6 +2120,7 @@ MonoBehaviour:
     - Ch29_nonPBR_Belly_Dance_1_phrase_10
     Weight: 5
     PreferredStroke: Trillo
+  UseLatestSlicedCh29ClipsOnly: 1
   BaseAnimatorSpeed: 1.85
   PulseAnimatorSpeedOnHits: 1
   BeatPulseReturnSpeed: 10
@@ -2101,8 +2144,8 @@ MonoBehaviour:
   KaDanceStates: []
   TrilloDanceStates: []
   ReactionSeconds: 0.65
-  DanceCrossfade: 0.12
-  ReturnCrossfade: 0.35
+  DanceCrossfade: 0.35
+  ReturnCrossfade: 0.65
   MinimumSecondsBetweenMoves: 0.25
   AvoidImmediateRepeats: 1
 --- !u!4 &1596381568

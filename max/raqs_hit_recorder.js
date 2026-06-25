@@ -5,6 +5,12 @@ var events = [];
 var recording = false;
 var recordStart = 0;
 var playbackTasks = [];
+var playbackOffsetMs = 35;
+var minForwardGapMs = 75;
+var minSameAddressGapMs = 110;
+var lastForwardTime = -999999;
+var lastAddressTimes = {};
+var filteredHitCount = 0;
 
 function now() {
     return new Date().getTime();
@@ -30,10 +36,10 @@ function play() {
         return;
     }
 
-    outlet(1, "playback_started", events.length, "hits");
+    outlet(1, "playback_started", events.length, "hits", "offset_ms", playbackOffsetMs);
 
     for (var i = 0; i < events.length; i++) {
-        scheduleEvent(events[i].time, events[i].address);
+        scheduleEvent(events[i].time + playbackOffsetMs, events[i].address);
     }
 }
 
@@ -61,10 +67,29 @@ function dump() {
     }
 }
 
+function offset(value) {
+    playbackOffsetMs = Number(value) || 0;
+    outlet(1, "playback_offset_ms", playbackOffsetMs);
+}
+
+function gate(value) {
+    minForwardGapMs = Math.max(0, Number(value) || 0);
+    outlet(1, "min_forward_gap_ms", minForwardGapMs);
+}
+
+function samegate(value) {
+    minSameAddressGapMs = Math.max(0, Number(value) || 0);
+    outlet(1, "min_same_address_gap_ms", minSameAddressGapMs);
+}
+
 function anything() {
     var address = messagename;
 
     if (address.charAt(0) !== "/") {
+        return;
+    }
+
+    if (!shouldForward(address)) {
         return;
     }
 
@@ -76,6 +101,35 @@ function anything() {
     }
 
     outlet(0, address);
+}
+
+function shouldForward(address) {
+    var hitTime = now();
+    var lastAddressTime = lastAddressTimes[address];
+
+    if (hitTime - lastForwardTime < minForwardGapMs) {
+        logFiltered(address, "global_gate");
+        return false;
+    }
+
+    if (lastAddressTime !== undefined && hitTime - lastAddressTime < minSameAddressGapMs) {
+        logFiltered(address, "same_hit_gate");
+        return false;
+    }
+
+    lastForwardTime = hitTime;
+    lastAddressTimes[address] = hitTime;
+    return true;
+}
+
+function logFiltered(address, reason) {
+    filteredHitCount++;
+
+    if (filteredHitCount <= 8) {
+        outlet(1, "filtered_hit", address, reason);
+    } else if (filteredHitCount === 9) {
+        outlet(1, "filtered_hit_logging_suppressed");
+    }
 }
 
 function scheduleEvent(delay, address) {

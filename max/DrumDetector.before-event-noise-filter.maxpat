@@ -291,7 +291,7 @@
                     "numoutlets": 2,
                     "outlettype": [ "signal", "" ],
                     "patching_rect": [ 538.0, 322.0, 344.0, 35.0 ],
-                    "text": "fluid.ampgate~ @rampup 3 @rampdown 80 @onthreshold -12 @offthreshold -30 @minslicelength 4410"
+                    "text": "fluid.ampgate~ @rampup 5 @rampdown 60 @onthreshold -18 @offthreshold -28 @minslicelength 6615"
                 }
             },
             {
@@ -303,60 +303,6 @@
                     "outlettype": [ "signal", "signal" ],
                     "patching_rect": [ 478.0, 195.0, 35.0, 22.0 ],
                     "text": "adc~"
-                }
-            },
-            {
-                "box": {
-                    "id": "raqs-event-filter-comment",
-                    "linecount": 2,
-                    "maxclass": "comment",
-                    "numinlets": 1,
-                    "numoutlets": 0,
-                    "patching_rect": [ 520.0, 115.0, 355.0, 34.0 ],
-                    "text": "EVENT MIC FILTER: filtered drum-body signal opens the gate; raw mic still feeds descriptors, meter, and recorder."
-                }
-            },
-            {
-                "box": {
-                    "id": "raqs-event-hip",
-                    "maxclass": "newobj",
-                    "numinlets": 2,
-                    "numoutlets": 1,
-                    "outlettype": [ "signal" ],
-                    "patching_rect": [ 538.0, 238.0, 52.0, 22.0 ],
-                    "text": "hip~ 70"
-                }
-            },
-            {
-                "box": {
-                    "id": "raqs-event-lores",
-                    "maxclass": "newobj",
-                    "numinlets": 3,
-                    "numoutlets": 1,
-                    "outlettype": [ "signal" ],
-                    "patching_rect": [ 538.0, 270.0, 88.0, 22.0 ],
-                    "text": "lores~ 850 1."
-                }
-            },
-            {
-                "box": {
-                    "id": "raqs-hit-speedlim",
-                    "maxclass": "newobj",
-                    "numinlets": 2,
-                    "numoutlets": 1,
-                    "outlettype": [ "bang" ],
-                    "patching_rect": [ 596.0, 222.0, 74.0, 22.0 ],
-                    "text": "speedlim 80"
-                }
-            },
-            {
-                "box": {
-                    "id": "raqs-hit-speedlim-comment",
-                    "maxclass": "comment",
-                    "numinlets": 1,
-                    "numoutlets": 0,
-                    "patching_rect": [ 675.0, 223.0, 230.0, 20.0 ],
-                    "text": "rejects double-triggers/resonance chatter"
                 }
             },
             {
@@ -686,21 +632,9 @@
         "lines": [
             {
                 "patchline": {
-                    "destination": [ "raqs-event-hip", 0 ],
+                    "destination": [ "obj-2", 0 ],
                     "order": 2,
                     "source": [ "obj-1", 0 ]
-                }
-            },
-            {
-                "patchline": {
-                    "destination": [ "raqs-event-lores", 0 ],
-                    "source": [ "raqs-event-hip", 0 ]
-                }
-            },
-            {
-                "patchline": {
-                    "destination": [ "obj-2", 0 ],
-                    "source": [ "raqs-event-lores", 0 ]
                 }
             },
             {
@@ -845,22 +779,16 @@
             },
             {
                 "patchline": {
-                    "destination": [ "raqs-hit-speedlim", 0 ],
-                    "source": [ "obj-4", 0 ]
-                }
-            },
-            {
-                "patchline": {
                     "destination": [ "obj-3", 0 ],
                     "order": 0,
-                    "source": [ "raqs-hit-speedlim", 0 ]
+                    "source": [ "obj-4", 0 ]
                 }
             },
             {
                 "patchline": {
                     "destination": [ "obj-5", 0 ],
                     "order": 1,
-                    "source": [ "raqs-hit-speedlim", 0 ]
+                    "source": [ "obj-4", 0 ]
                 }
             },
             {
